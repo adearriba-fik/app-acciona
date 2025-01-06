@@ -1,3 +1,4 @@
+import { CosmosDbClient } from "./shared/infrastructure/cosmosdb/CosmosDbClient";
 import { ILogger } from "./shared/infrastructure/logging/ILogger";
 import { WinstonLogger } from "./shared/infrastructure/logging/WinstonLogger";
 import { ITicketNumberingModuleApi, TicketNumberingModule } from "./tickets/TicketNumberingModule";
@@ -30,5 +31,6 @@ class Modules {
     }
 }
 
+export const cosmosDbClient = CosmosDbClient.getInstance();
 export const modules = Modules.getInstance();
 export const logger: ILogger = new WinstonLogger();

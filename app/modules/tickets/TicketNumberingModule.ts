@@ -1,5 +1,5 @@
+import { cosmosDbClient } from "../modules.server";
 import { IShopifyWebhookHandler } from "../shared/domain/ports/IShopifyWebhookHandler";
-import { CosmosDbClient } from "../shared/infrastructure/cosmosdb/CosmosDbClient";
 import { OrderPaidWebhookHandler } from "./application/OrderPaidWebhookHandler";
 import { RefundCreateWebhookHandler } from "./application/RefundCreateWebhookHandler";
 import { TransactionCreateWebhookHandler } from "./application/TransactionCreateWebhookHandler";
@@ -15,10 +15,10 @@ import { CosmosRefundRepository } from "./infrastructure/adapters/cosmosdb/Cosmo
 import { CosmosTicketNumberGenerator } from "./infrastructure/adapters/cosmosdb/CosmosTicketNumberGenerator";
 import { CosmosTransactionRepository } from "./infrastructure/adapters/cosmosdb/CosmosTransactionRepository";
 
-const ORDERS_CONTAINER = "ORDERS";
-const TICKETS_CONTAINER = "TICKETS";
-const REFUNDS_CONTAINER = "REFUNDS";
-const TRANSACTIONS_CONTAINER = "TRANSACTIONS";
+const ORDERS_CONTAINER = "Orders";
+const TICKETS_CONTAINER = "Tickets";
+const REFUNDS_CONTAINER = "Refunds";
+const TRANSACTIONS_CONTAINER = "Transactions";
 
 export interface ITicketNumberingModuleApi {
     getOrderPaidWebhookHandler(): IShopifyWebhookHandler<OrderPaidPayload>;
@@ -48,19 +48,17 @@ export class TicketNumberingModule implements ITicketNumberingModuleApi {
     }
 
     public static async create(): Promise<TicketNumberingModule> {
-        const db = await CosmosDbClient.getInstance();
-
         const orderRepository = new CosmosOrderRepository(
-            await db.getContainer(ORDERS_CONTAINER)
+            await cosmosDbClient.getContainer(ORDERS_CONTAINER)
         );
         const refundRepository = new CosmosRefundRepository(
-            await db.getContainer(REFUNDS_CONTAINER)
+            await cosmosDbClient.getContainer(REFUNDS_CONTAINER)
         );
         const transactionRepository = new CosmosTransactionRepository(
-            await db.getContainer(TRANSACTIONS_CONTAINER)
+            await cosmosDbClient.getContainer(TRANSACTIONS_CONTAINER)
         );
         const ticketNumberGenerator = new CosmosTicketNumberGenerator(
-            await db.getContainer(TICKETS_CONTAINER)
+            await cosmosDbClient.getContainer(TICKETS_CONTAINER)
         );
 
         return new TicketNumberingModule(

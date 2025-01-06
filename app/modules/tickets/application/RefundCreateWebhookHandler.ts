@@ -12,13 +12,13 @@ export class RefundCreateWebhookHandler implements IShopifyWebhookHandler<Refund
     ) { }
 
     async handle({ payload }: ShopifyWebhookContext<RefundCreatePayload>): Promise<void> {
-        const existingRefund = await this.refundRepository.findByRefundId(payload.id);
+        const existingRefund = await this.refundRepository.findByRefundId(payload.id.toString());
         if (existingRefund) {
             return;
         }
 
         const refund: Refund = {
-            id: payload.id,
+            id: payload.id.toString(),
             orderId: payload.order_id,
             createdAt: new Date(payload.created_at),
             processedAt: new Date(payload.processed_at),

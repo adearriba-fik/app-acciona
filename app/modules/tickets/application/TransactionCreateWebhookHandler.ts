@@ -12,13 +12,13 @@ export class TransactionCreateWebhookHandler implements IShopifyWebhookHandler<T
     ) { }
 
     async handle({ payload }: ShopifyWebhookContext<TransactionCreatePayload>): Promise<void> {
-        const existingTransaction = await this.transactionRepository.findByTransactionId(payload.id);
+        const existingTransaction = await this.transactionRepository.findByTransactionId(payload.id.toString());
         if (existingTransaction) {
             return;
         }
 
         const transaction: Transaction = {
-            id: payload.id,
+            id: payload.id.toString(),
             orderId: payload.order_id,
             kind: payload.kind,
             gateway: payload.gateway,
@@ -34,19 +34,6 @@ export class TransactionCreateWebhookHandler implements IShopifyWebhookHandler<T
             deviceId: payload.device_id,
             errorCode: payload.error_code,
             sourceName: payload.source_name,
-            paymentDetails: {
-                creditCardBin: payload.payment_details.credit_card_bin,
-                avsResultCode: payload.payment_details.avs_result_code,
-                cvvResultCode: payload.payment_details.cvv_result_code,
-                creditCardNumber: payload.payment_details.credit_card_number,
-                creditCardCompany: payload.payment_details.credit_card_company,
-                buyerActionInfo: payload.payment_details.buyer_action_info,
-                creditCardName: payload.payment_details.credit_card_name,
-                creditCardWallet: payload.payment_details.credit_card_wallet,
-                creditCardExpirationMonth: payload.payment_details.credit_card_expiration_month,
-                creditCardExpirationYear: payload.payment_details.credit_card_expiration_year,
-                paymentMethodName: payload.payment_details.payment_method_name
-            },
             receipt: payload.receipt,
             amount: parseFloat(payload.amount),
             currency: payload.currency,

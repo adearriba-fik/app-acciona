@@ -2,6 +2,15 @@
 # yarn lockfile v1
 
 
+"@adearriba/shopify-app-session-storage-cosmosdb@^3.1.0":
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/@adearriba/shopify-app-session-storage-cosmosdb/-/shopify-app-session-storage-cosmosdb-3.1.0.tgz#8bf93e0772b669c5150caad1de7628c7cf291b9e"
+  integrity sha512-TcjD7VGAdNKrKBsMmRM6x9IAQCl18MF8SfrCZv44M++pOeOqsnTWnyMDTMYMQT9PEFA4qoKZ+IWd10KiBPaxoQ==
+  dependencies:
+    "@azure/cosmos" "^4.0.0"
+    "@shopify/shopify-api" "^11.0.0"
+    "@shopify/shopify-app-session-storage" "^3.0.0"
+
 "@ampproject/remapping@^2.2.0":
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/@ampproject/remapping/-/remapping-2.3.0.tgz#ed441b6fa600072520ce18b43d2c8cc8caecc7f4"
@@ -85,7 +94,7 @@
     "@azure/abort-controller" "^2.0.0"
     tslib "^2.6.2"
 
-"@azure/cosmos@^4.2.0":
+"@azure/cosmos@^4.0.0", "@azure/cosmos@^4.2.0":
   version "4.2.0"
   resolved "https://registry.yarnpkg.com/@azure/cosmos/-/cosmos-4.2.0.tgz#eb1379a6bf1d8e12d07151ce6e53f5248d63a715"
   integrity sha512-acfAQTYLxgB/iZK7XvTVYe9NPk6DECEgcIXDQhyn7Uo4dGxeeW5D3YqLjLJrrzND5Iawer3eUQ5/iiLWvTGAxQ==
@@ -1724,47 +1733,6 @@
   resolved "https://registry.yarnpkg.com/@pkgjs/parseargs/-/parseargs-0.11.0.tgz#a77ea742fab25775145434eb1d2328cf5013ac33"
   integrity sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==
 
-"@prisma/client@^5.11.0":
-  version "5.22.0"
-  resolved "https://registry.yarnpkg.com/@prisma/client/-/client-5.22.0.tgz#da1ca9c133fbefe89e0da781c75e1c59da5f8802"
-  integrity sha512-M0SVXfyHnQREBKxCgyo7sffrKttwE6R8PMq330MIUF0pTwjUhLbW84pFDlf06B27XyCR++VtjugEnIHdr07SVA==
-
-"@prisma/debug@5.22.0":
-  version "5.22.0"
-  resolved "https://registry.yarnpkg.com/@prisma/debug/-/debug-5.22.0.tgz#58af56ed7f6f313df9fb1042b6224d3174bbf412"
-  integrity sha512-AUt44v3YJeggO2ZU5BkXI7M4hu9BF2zzH2iF2V5pyXT/lRTyWiElZ7It+bRH1EshoMRxHgpYg4VB6rCM+mG5jQ==
-
-"@prisma/engines-version@5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2":
-  version "5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2"
-  resolved "https://registry.yarnpkg.com/@prisma/engines-version/-/engines-version-5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2.tgz#d534dd7235c1ba5a23bacd5b92cc0ca3894c28f4"
-  integrity sha512-2PTmxFR2yHW/eB3uqWtcgRcgAbG1rwG9ZriSvQw+nnb7c4uCr3RAcGMb6/zfE88SKlC1Nj2ziUvc96Z379mHgQ==
-
-"@prisma/engines@5.22.0":
-  version "5.22.0"
-  resolved "https://registry.yarnpkg.com/@prisma/engines/-/engines-5.22.0.tgz#28f3f52a2812c990a8b66eb93a0987816a5b6d84"
-  integrity sha512-UNjfslWhAt06kVL3CjkuYpHAWSO6L4kDCVPegV6itt7nD1kSJavd3vhgAEhjglLJJKEdJ7oIqDJ+yHk6qO8gPA==
-  dependencies:
-    "@prisma/debug" "5.22.0"
-    "@prisma/engines-version" "5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2"
-    "@prisma/fetch-engine" "5.22.0"
-    "@prisma/get-platform" "5.22.0"
-
-"@prisma/fetch-engine@5.22.0":
-  version "5.22.0"
-  resolved "https://registry.yarnpkg.com/@prisma/fetch-engine/-/fetch-engine-5.22.0.tgz#4fb691b483a450c5548aac2f837b267dd50ef52e"
-  integrity sha512-bkrD/Mc2fSvkQBV5EpoFcZ87AvOgDxbG99488a5cexp5Ccny+UM6MAe/UFkUC0wLYD9+9befNOqGiIJhhq+HbA==
-  dependencies:
-    "@prisma/debug" "5.22.0"
-    "@prisma/engines-version" "5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2"
-    "@prisma/get-platform" "5.22.0"
-
-"@prisma/get-platform@5.22.0":
-  version "5.22.0"
-  resolved "https://registry.yarnpkg.com/@prisma/get-platform/-/get-platform-5.22.0.tgz#fc675bc9d12614ca2dade0506c9c4a77e7dddacd"
-  integrity sha512-pHhpQdr1UPFpt+zFfnPazhulaZYCUqeIcPpJViYoq9R+D/yw4fjE+CtnsnKzPYm0ddUbeXUzjGVGIRVgPDCk4Q==
-  dependencies:
-    "@prisma/debug" "5.22.0"
-
 "@remix-run/dev@^2.7.1":
   version "2.15.2"
   resolved "https://registry.yarnpkg.com/@remix-run/dev/-/dev-2.15.2.tgz#b0280c077119086efad587e8afea37030b869d1f"
@@ -2152,7 +2120,7 @@
     react-fast-compare "^3.2.0"
     react-transition-group "^4.4.2"
 
-"@shopify/shopify-api@^11.6.1":
+"@shopify/shopify-api@^11.0.0", "@shopify/shopify-api@^11.6.1":
   version "11.6.1"
   resolved "https://registry.yarnpkg.com/@shopify/shopify-api/-/shopify-api-11.6.1.tgz#3bb23876fcc1b3e9feb352dc37a6a8b9f5eaf3f5"
   integrity sha512-4NlaZPq9vjMrJ/L6r3jb0UA00YEDOVxi14mRlJx8Fdc9I4uI8sk1vHmFd23jq9sIqDu6oFcxv82AdKyiGHgUEg==
@@ -2182,12 +2150,7 @@
     isbot "^5.1.17"
     semver "^7.6.2"
 
-"@shopify/shopify-app-session-storage-prisma@^5.1.5":
-  version "5.2.0"
-  resolved "https://registry.yarnpkg.com/@shopify/shopify-app-session-storage-prisma/-/shopify-app-session-storage-prisma-5.2.0.tgz#9c534e2c8c0799181ff8f46a7fcacb3a6db0d2b5"
-  integrity sha512-Wf3iBok6wcRX/tNoNWZPvJY2db4d8xjjDGYUAFHlFCc85RI01DcRfCSEB/bOv0QTrkGwlHDm/ZjwQK5gjSY6Tg==
-
-"@shopify/shopify-app-session-storage@^3.0.9":
+"@shopify/shopify-app-session-storage@^3.0.0", "@shopify/shopify-app-session-storage@^3.0.9":
   version "3.0.9"
   resolved "https://registry.yarnpkg.com/@shopify/shopify-app-session-storage/-/shopify-app-session-storage-3.0.9.tgz#9fae28b25d35ead2e03d6ef6b10debacbe23fe07"
   integrity sha512-jIcztqHiDhBRaCPJvB8HeWRauTNkxGFelgz98KYv6NwFFFSR6uMKBAPsFNAquT7eFyL5Z7UntcdUotHLKzuBBg==
@@ -4626,7 +4589,7 @@ fs.realpath@^1.0.0:
   resolved "https://registry.yarnpkg.com/fs.realpath/-/fs.realpath-1.0.0.tgz#1504ad2523158caa40db4a2787cb01411994ea4f"
   integrity sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==
 
-fsevents@2.3.3, fsevents@~2.3.2, fsevents@~2.3.3:
+fsevents@~2.3.2, fsevents@~2.3.3:
   version "2.3.3"
   resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.3.3.tgz#cac6407785d03675a2a5e1a5305c697b347d90d6"
   integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
@@ -7093,15 +7056,6 @@ priorityqueuejs@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/priorityqueuejs/-/priorityqueuejs-2.0.0.tgz#96064040edd847ee9dd3013d8e16297399a6bd4f"
   integrity sha512-19BMarhgpq3x4ccvVi8k2QpJZcymo/iFUcrhPd4V96kYGovOdTsWwy7fxChYi4QY+m2EnGBWSX9Buakz+tWNQQ==
-
-prisma@^5.11.0:
-  version "5.22.0"
-  resolved "https://registry.yarnpkg.com/prisma/-/prisma-5.22.0.tgz#1f6717ff487cdef5f5799cc1010459920e2e6197"
-  integrity sha512-vtpjW3XuYCSnMsNVBjLMNkTj6OZbudcPPTPYHqX0CJfpcdWciI1dM8uHETwmDxxiqEwCIE6WvXucWUetJgfu/A==
-  dependencies:
-    "@prisma/engines" "5.22.0"
-  optionalDependencies:
-    fsevents "2.3.3"
 
 proc-log@^3.0.0:
   version "3.0.0"

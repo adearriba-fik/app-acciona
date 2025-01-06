@@ -15,7 +15,6 @@ export interface Transaction {
     deviceId: string | null;
     errorCode: string | null;
     sourceName: string;
-    paymentDetails: PaymentDetails;
     receipt: Record<string, unknown>;
     amount: number;
     currency: string;
@@ -24,20 +23,6 @@ export interface Transaction {
     manualPaymentGateway: boolean;
     amountRounding: number | null;
     adminGraphqlApiId: string;
-}
-
-interface PaymentDetails {
-    creditCardBin: string | null;
-    avsResultCode: string | null;
-    cvvResultCode: string | null;
-    creditCardNumber: string | null;
-    creditCardCompany: string | null;
-    buyerActionInfo: string | null;
-    creditCardName: string | null;
-    creditCardWallet: string | null;
-    creditCardExpirationMonth: number | null;
-    creditCardExpirationYear: number | null;
-    paymentMethodName: string | null;
 }
 
 interface Money {

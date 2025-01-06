@@ -11,7 +11,7 @@ export class CosmosDbClient {
             endpoint: process.env.COSMOS_ENDPOINT!,
             key: process.env.COSMOS_KEY!
         });
-        this.database = this.client.database(process.env.COSMOS_DATABASE_NAME!);
+        this.database = this.client.database(process.env.COSMOS_DBNAME!);
     }
 
     public static getInstance(): CosmosDbClient {
@@ -23,6 +23,9 @@ export class CosmosDbClient {
 
     public async getContainer(containerId: string): Promise<Container> {
         if (!this.containers.has(containerId)) {
+            await this.database.containers.createIfNotExists({
+                id: containerId,
+            });
             const container = this.database.container(containerId);
             await container.read();
             this.containers.set(containerId, container);

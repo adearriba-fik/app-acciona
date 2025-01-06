@@ -16,12 +16,12 @@ export class OrderPaidWebhookHandler implements IShopifyWebhookHandler<OrderPaid
     ) { }
 
     async handle({ payload, graphqlClient }: ShopifyWebhookContext<OrderPaidPayload>): Promise<void> {
-        const existingOrder = await this.orderRepository.findByOrderId(payload.id);
+        const existingOrder = await this.orderRepository.findByOrderId(payload.id.toString());
         if (existingOrder) {
             return;
         }
 
-        const ticketNumber = await this.ticketNumberGenerator.generateNext();
+        const ticketNumber = await this.ticketNumberGenerator.findOrGenerateTicketForDocument('order', payload.id);
 
         const orderUpdater: IOrderTicketNumberUpdater = new ShopifyOrderTicketNumberUpdater(graphqlClient);
 
@@ -31,7 +31,7 @@ export class OrderPaidWebhookHandler implements IShopifyWebhookHandler<OrderPaid
         );
 
         const order: Order = {
-            id: payload.id,
+            id: payload.id.toString(),
             orderName: payload.name,
             orderNumber: payload.order_number,
             ticketNumber,
