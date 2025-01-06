@@ -3,7 +3,7 @@
 client_id = "922282a3229a4b63a8241b2032e1f9d3"
 name = "app-acciona"
 handle = "app-acciona"
-application_url = "https://example.com/"
+application_url = "https://implied-eleven-versus-oem.trycloudflare.com"
 embedded = true
 
 [access_scopes]
@@ -11,7 +11,11 @@ embedded = true
 scopes = "write_products"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [
+  "https://implied-eleven-versus-oem.trycloudflare.com/auth/callback",
+  "https://implied-eleven-versus-oem.trycloudflare.com/auth/shopify/callback",
+  "https://implied-eleven-versus-oem.trycloudflare.com/api/auth/callback"
+]
 
 [webhooks]
 api_version = "2025-01"
@@ -24,5 +28,21 @@ api_version = "2025-01"
   topics = [ "app/scopes_update" ]
   uri = "/webhooks/app/scopes_update"
 
+  [[webhooks.subscriptions]]
+  topics = [ "orders/paid" ]
+  uri = "/webhooks/orders/paid"
+
+  [[webhooks.subscriptions]]
+  topics = [ "refunds/create" ]
+  uri = "/webhooks/refunds/create"
+
+  [[webhooks.subscriptions]]
+  topics = [ "order_transactions/create" ]
+  uri = "/webhooks/order_transactions/create"
+
 [pos]
 embedded = false
+
+[build]
+dev_store_url = "fik-checkoutext-preview.myshopify.com"
+automatically_update_urls_on_dev = true
