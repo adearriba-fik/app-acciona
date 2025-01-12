@@ -7,9 +7,10 @@ import { ShopifyOrderTicketNumberUpdater } from "../infrastructure/adapters/shop
 import { MoneyType } from "../domain/entities/MoneyType";
 import { MoneySet } from "../domain/entities/MoneySet";
 import { ILogger } from "app/modules/shared/infrastructure/logging/ILogger";
-import { RefundCreatePayload, RefundLineItem, RefundTransaction } from "../domain/entities/RefundCreatedPayload";
+import { RefundCreatePayload, RefundLineItem } from "../domain/entities/RefundCreatedPayload";
 import { mapToRefundTicketCreateRequest, RefundSummary } from "../domain/entities/RefundSummary";
 import { parseAmount, roundToTwoDecimals, safeAdd, safeDivide } from "../domain/utils/money-utils";
+import { modules } from "app/modules/modules.server";
 
 export class RefundCreatedWebhookHandler implements IShopifyWebhookHandler<RefundCreatePayload> {
     public readonly topic = 'orders/paid';
@@ -25,13 +26,24 @@ export class RefundCreatedWebhookHandler implements IShopifyWebhookHandler<Refun
         });
     }
 
-    async handle({ payload, graphqlClient }: ShopifyWebhookContext<RefundCreatePayload>): Promise<void> {
+    async handle({ payload, shop, graphqlClient }: ShopifyWebhookContext<RefundCreatePayload>): Promise<void> {
         if (payload.refund_line_items.length == 0) {
             this.logger.info("Discarded: Empty refund_line_items array.");
             return;
         }
 
-        const shopSummary = generateRefundSummary(payload, 'shop_money');
+        const storeConfigModule = await modules.storeConfig;
+        const storeConfig = await storeConfigModule.getStoreConfig(shop);
+        const taxesIncluded = storeConfig?.taxesIncluded ?? true;
+
+        this.logger.info('Processing refund with tax configuration', {
+            shop,
+            taxesIncluded,
+            refundId: payload.id,
+            orderId: payload.order_id
+        });
+
+        const shopSummary = generateRefundSummary(payload, 'shop_money', taxesIncluded);
         this.logger.info('Shop Currency Summary', {
             data: shopSummary
         });
@@ -59,7 +71,6 @@ function getMoneyAmount(moneySet: MoneySet, moneyType: MoneyType): {
     };
 }
 
-
 function calculateTotalRefundAmount(refundLineItems: RefundLineItem[], moneyType: MoneyType): number {
     return roundToTwoDecimals(
         refundLineItems.reduce((sum, item) => {
@@ -76,7 +87,8 @@ function getCurrencyFromMoneySet(moneySet: MoneySet, moneyType: MoneyType): stri
 
 function groupRefundLineItemsByTaxRate(
     refund: RefundCreatePayload,
-    moneyType: MoneyType
+    moneyType: MoneyType,
+    taxesIncluded: boolean
 ): Map<string, {
     price: number;
     tax: number;
@@ -99,8 +111,18 @@ function groupRefundLineItemsByTaxRate(
         const taxLine = refundLineItem.line_item.tax_lines[0];
         const key = `${taxLine.rate}-${taxLine.title}`;
 
-        const basePrice = safeDivide(subtotal, (1 + taxLine.rate));
-        const tax = roundToTwoDecimals(subtotal - basePrice);
+        let basePrice: number;
+        let tax: number;
+
+        if (taxesIncluded) {
+            // If taxes are included in the price, we need to extract them
+            basePrice = safeDivide(subtotal, (1 + taxLine.rate));
+            tax = roundToTwoDecimals(subtotal - basePrice);
+        } else {
+            // If taxes are not included, the subtotal is already the base price
+            basePrice = subtotal;
+            tax = getMoneyAmount(taxLine.price_set, moneyType).amount;
+        }
 
         const currentGroup = taxGroups.get(key) || {
             price: 0,
@@ -120,9 +142,10 @@ function groupRefundLineItemsByTaxRate(
 
 function generateRefundSummary(
     refund: RefundCreatePayload,
-    moneyType: MoneyType = 'shop_money'
+    moneyType: MoneyType = 'shop_money',
+    taxesIncluded: boolean
 ): RefundSummary {
-    const taxGroups = groupRefundLineItemsByTaxRate(refund, moneyType);
+    const taxGroups = groupRefundLineItemsByTaxRate(refund, moneyType, taxesIncluded);
     const totalAmount = calculateTotalRefundAmount(refund.refund_line_items, moneyType);
     const currency = getCurrencyFromMoneySet(refund.refund_line_items[0].subtotal_set, moneyType);
 

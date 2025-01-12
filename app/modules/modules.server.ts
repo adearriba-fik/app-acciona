@@ -1,6 +1,7 @@
 import { CosmosDbClient } from "./shared/infrastructure/cosmosdb/CosmosDbClient";
 import { ILogger } from "./shared/infrastructure/logging/ILogger";
 import { WinstonLogger } from "./shared/infrastructure/logging/WinstonLogger";
+import { IStoreConfigModuleApi, StoreConfigModule } from "./store-config/StoreConfigModule";
 import { ITicketNumberingModuleApi, TicketNumberingModule } from "./tickets/TicketNumberingModule";
 
 class Modules {
@@ -28,6 +29,10 @@ class Modules {
 
     public get tickets(): Promise<ITicketNumberingModuleApi> {
         return this.getOrCreateModule('tickets', () => TicketNumberingModule.create());
+    }
+
+    public get storeConfig(): Promise<IStoreConfigModuleApi> {
+        return this.getOrCreateModule('storeConfig', () => StoreConfigModule.create());
     }
 }
 

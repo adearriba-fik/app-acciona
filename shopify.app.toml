@@ -3,7 +3,7 @@
 client_id = "922282a3229a4b63a8241b2032e1f9d3"
 name = "app-acciona"
 handle = "app-acciona"
-application_url = "https://awareness-passes-acre-guidance.trycloudflare.com"
+application_url = "https://declaration-mambo-alternatively-thinking.trycloudflare.com"
 embedded = true
 
 [access_scopes]
@@ -12,9 +12,9 @@ scopes = "read_orders,write_orders,write_metaobject_definitions,write_metaobject
 
 [auth]
 redirect_urls = [
-  "https://awareness-passes-acre-guidance.trycloudflare.com/auth/callback",
-  "https://awareness-passes-acre-guidance.trycloudflare.com/auth/shopify/callback",
-  "https://awareness-passes-acre-guidance.trycloudflare.com/api/auth/callback"
+  "https://declaration-mambo-alternatively-thinking.trycloudflare.com/auth/callback",
+  "https://declaration-mambo-alternatively-thinking.trycloudflare.com/auth/shopify/callback",
+  "https://declaration-mambo-alternatively-thinking.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

@@ -8,6 +8,10 @@ export class WinstonLogger implements ILogger {
 
     constructor(defaultMeta: Record<string, unknown> = { service: 'acciona-app' }) {
         this.level = process.env.LOG_LEVEL ? process.env.LOG_LEVEL : process.env.NODE_ENV === 'development' ? 'debug' : 'info';
+        const logFormat = process.env.NODE_ENV === 'development' ?
+            winston.format.printf(({ timestamp, level, message, ...meta }) => {
+                return `[${level}] ${message} | ${meta ? JSON.stringify(meta) : ''}`;
+            }) : winston.format.json();
 
         this.defaultMeta = defaultMeta;
 
@@ -16,7 +20,7 @@ export class WinstonLogger implements ILogger {
             format: winston.format.combine(
                 winston.format.timestamp(),
                 winston.format.errors({ stack: true }),
-                winston.format.json()
+                logFormat
             ),
             defaultMeta: { service: 'acciona-app' },
             transports: [

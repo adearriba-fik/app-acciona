@@ -11,6 +11,7 @@ import { DiscountAllocation } from "../domain/entities/DiscountAllocation";
 import { MoneySet } from "../domain/entities/MoneySet";
 import { ILogger } from "app/modules/shared/infrastructure/logging/ILogger";
 import { parseAmount, roundToTwoDecimals, safeAdd, safeDivide, safeMultiply } from "../domain/utils/money-utils";
+import { modules } from "app/modules/modules.server";
 
 export class OrderPaidWebhookHandler implements IShopifyWebhookHandler<OrderPaidPayload> {
     public readonly topic = 'orders/paid';
@@ -26,8 +27,18 @@ export class OrderPaidWebhookHandler implements IShopifyWebhookHandler<OrderPaid
         });
     }
 
-    async handle({ payload, graphqlClient }: ShopifyWebhookContext<OrderPaidPayload>): Promise<void> {
-        const shopSummary = generateOrderSummary(payload, 'shop_money');
+    async handle({ payload, shop, graphqlClient }: ShopifyWebhookContext<OrderPaidPayload>): Promise<void> {
+        const storeConfigModule = await modules.storeConfig;
+        const storeConfig = await storeConfigModule.getStoreConfig(shop);
+        const taxesIncluded = storeConfig?.taxesIncluded ?? true;
+
+        this.logger.info('Processing order with tax configuration', {
+            shop,
+            taxesIncluded,
+            orderId: payload.id
+        });
+
+        const shopSummary = generateOrderSummary(payload, 'shop_money', taxesIncluded);
         this.logger.info('Shop Currency Summary', {
             data: shopSummary
         });
@@ -69,7 +80,8 @@ function calculateLineItemTotalDiscount(
 
 function calculateLineItemBaseAmount(
     lineItem: OrderLineItem,
-    moneyType: MoneyType
+    moneyType: MoneyType,
+    taxesIncluded: boolean
 ): {
     netPrice: number;
     taxRates: Array<{
@@ -82,13 +94,19 @@ function calculateLineItemBaseAmount(
     const { amount: basePrice, currency } = getMoneyAmount(lineItem.price_set, moneyType);
     const totalBasePrice = safeMultiply(basePrice, lineItem.quantity);
     const totalDiscount = calculateLineItemTotalDiscount(lineItem.discount_allocations, moneyType);
-    const netPrice = roundToTwoDecimals(totalBasePrice - totalDiscount);
+    let netPrice = roundToTwoDecimals(totalBasePrice - totalDiscount);
 
     const taxRates = lineItem.tax_lines.map(taxLine => ({
         rate: taxLine.rate,
         taxAmount: getMoneyAmount(taxLine.price_set, moneyType).amount,
         title: taxLine.title
     }));
+
+    // If taxes are included in the price, we need to extract them
+    if (taxesIncluded) {
+        const totalTaxRate = taxRates.reduce((sum, tax) => safeAdd(sum, tax.rate), 0);
+        netPrice = safeDivide(netPrice, (1 + totalTaxRate));
+    }
 
     return {
         netPrice,
@@ -99,7 +117,8 @@ function calculateLineItemBaseAmount(
 
 function groupLineItemsByTaxRate(
     order: OrderPaidPayload,
-    moneyType: MoneyType
+    moneyType: MoneyType,
+    taxesIncluded: boolean
 ): Map<number, {
     price: number;
     tax: number;
@@ -114,7 +133,7 @@ function groupLineItemsByTaxRate(
     }>();
 
     order.line_items.forEach(lineItem => {
-        const { netPrice, taxRates, currency } = calculateLineItemBaseAmount(lineItem, moneyType);
+        const { netPrice, taxRates, currency } = calculateLineItemBaseAmount(lineItem, moneyType, taxesIncluded);
 
         // Calculate total tax rate for proportional distribution
         const totalTaxRate = roundToTwoDecimals(
@@ -135,11 +154,8 @@ function groupLineItemsByTaxRate(
 
             // Distribute net price proportionally based on tax rate
             const priceShare = safeMultiply(netPrice, safeDivide(rate, totalTaxRate));
-            const priceWithoutTax = order.taxes_included
-                ? safeDivide(priceShare, (1 + rate))
-                : priceShare;
 
-            group.price = safeAdd(group.price, priceWithoutTax);
+            group.price = safeAdd(group.price, priceShare);
             group.tax = safeAdd(group.tax, taxAmount);
         });
     });
@@ -149,9 +165,10 @@ function groupLineItemsByTaxRate(
 
 function generateOrderSummary(
     order: OrderPaidPayload,
-    moneyType: MoneyType = 'shop_money'
+    moneyType: MoneyType = 'shop_money',
+    taxesIncluded: boolean
 ): OrderSummary {
-    const taxGroups = groupLineItemsByTaxRate(order, moneyType);
+    const taxGroups = groupLineItemsByTaxRate(order, moneyType, taxesIncluded);
     const { amount: totalAmount, currency } = getMoneyAmount(order.total_price_set, moneyType);
 
     let tax_lines: SummaryTaxLine[] = Array.from(taxGroups.entries())
