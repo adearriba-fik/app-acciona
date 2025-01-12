@@ -33,8 +33,7 @@ export class RefundCreatedWebhookHandler implements IShopifyWebhookHandler<Refun
         }
 
         const storeConfigModule = await modules.storeConfig;
-        const storeConfig = await storeConfigModule.getStoreConfig(shop);
-        const taxesIncluded = storeConfig?.taxesIncluded ?? true;
+        const taxesIncluded = await storeConfigModule.getTaxesIncluded(shop);
 
         this.logger.info('Processing refund with tax configuration', {
             shop,

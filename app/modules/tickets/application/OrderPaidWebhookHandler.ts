@@ -29,8 +29,7 @@ export class OrderPaidWebhookHandler implements IShopifyWebhookHandler<OrderPaid
 
     async handle({ payload, shop, graphqlClient }: ShopifyWebhookContext<OrderPaidPayload>): Promise<void> {
         const storeConfigModule = await modules.storeConfig;
-        const storeConfig = await storeConfigModule.getStoreConfig(shop);
-        const taxesIncluded = storeConfig?.taxesIncluded ?? true;
+        const taxesIncluded = await storeConfigModule.getTaxesIncluded(shop);
 
         this.logger.info('Processing order with tax configuration', {
             shop,

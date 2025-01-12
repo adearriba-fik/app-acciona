@@ -6,7 +6,7 @@ import { ITicketNumberingModuleApi, TicketNumberingModule } from "./tickets/Tick
 
 class Modules {
     private static instance: Modules;
-    private moduleInstances: Map<string, Promise<any>> = new Map();
+    private moduleInstances: Map<string, Promise<any> | any> = new Map();
 
     private constructor() { }
 
@@ -17,7 +17,17 @@ class Modules {
         return this.instance;
     }
 
-    private async getOrCreateModule<T>(
+    private getOrCreateModule<T>(
+        key: string,
+        createFn: () => T
+    ): T {
+        if (!this.moduleInstances.has(key)) {
+            this.moduleInstances.set(key, createFn());
+        }
+        return this.moduleInstances.get(key) as T;
+    }
+
+    private async getOrCreateModuleAsync<T>(
         key: string,
         createFn: () => Promise<T>
     ): Promise<T> {
@@ -28,11 +38,11 @@ class Modules {
     }
 
     public get tickets(): Promise<ITicketNumberingModuleApi> {
-        return this.getOrCreateModule('tickets', () => TicketNumberingModule.create());
+        return this.getOrCreateModuleAsync('tickets', () => TicketNumberingModule.create());
     }
 
-    public get storeConfig(): Promise<IStoreConfigModuleApi> {
-        return this.getOrCreateModule('storeConfig', () => StoreConfigModule.create());
+    public get storeConfig(): IStoreConfigModuleApi {
+        return this.getOrCreateModule('store-config', () => StoreConfigModule.create());
     }
 }
 
