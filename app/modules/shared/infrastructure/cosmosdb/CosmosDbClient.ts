@@ -1,4 +1,4 @@
-import { CosmosClient, Container, Database } from "@azure/cosmos";
+import { CosmosClient, Container, Database, ContainerRequest } from "@azure/cosmos";
 
 export class CosmosDbClient {
     private static instance: CosmosDbClient;
@@ -21,9 +21,10 @@ export class CosmosDbClient {
         return CosmosDbClient.instance;
     }
 
-    public async getContainer(containerId: string): Promise<Container> {
+    public async getContainer(containerId: string, body?: Partial<ContainerRequest>): Promise<Container> {
         if (!this.containers.has(containerId)) {
             await this.database.containers.createIfNotExists({
+                ...body,
                 id: containerId,
             });
             const container = this.database.container(containerId);

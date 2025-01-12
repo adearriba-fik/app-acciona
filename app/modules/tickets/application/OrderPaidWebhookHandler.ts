@@ -1,59 +1,189 @@
-import { Order } from "app/modules/tickets/domain/entities/Order";
-import { IOrderRepository } from "app/modules/tickets/domain/ports/IOrderRepository";
+import { mapToOrderTicketCreateRequest, OrderSummary } from "app/modules/tickets/domain/entities/OrderSummary";
+import { SummaryTaxLine } from "../domain/entities/SummaryTaxLine";
 import { ITicketNumberGenerator } from "app/modules/tickets/domain/ports/ITicketNumberGenerator";
 import { IShopifyWebhookHandler } from "app/modules/shared/domain/ports/IShopifyWebhookHandler";
 import { ShopifyWebhookContext } from "app/modules/shared/domain/ports/ShopifyWebhookContext";
 import { IOrderTicketNumberUpdater } from "../domain/ports/IOrderTicketNumberUpdater";
 import { ShopifyOrderTicketNumberUpdater } from "../infrastructure/adapters/shopify/mutations/ShopifyOrderTicketNumberUpdater";
-import { OrderPaidPayload } from "../domain/entities/OrderPaidPayload";
+import { OrderLineItem, OrderPaidPayload } from "../domain/entities/OrderPaidPayload";
+import { MoneyType } from "../domain/entities/MoneyType";
+import { DiscountAllocation } from "../domain/entities/DiscountAllocation";
+import { MoneySet } from "../domain/entities/MoneySet";
+import { ILogger } from "app/modules/shared/infrastructure/logging/ILogger";
+import { parseAmount, roundToTwoDecimals, safeAdd, safeDivide, safeMultiply } from "../domain/utils/money-utils";
 
 export class OrderPaidWebhookHandler implements IShopifyWebhookHandler<OrderPaidPayload> {
     public readonly topic = 'orders/paid';
+    private readonly logger: ILogger;
 
     constructor(
-        private readonly orderRepository: IOrderRepository,
-        private readonly ticketNumberGenerator: ITicketNumberGenerator
-    ) { }
+        private readonly ticketNumberGenerator: ITicketNumberGenerator,
+        baseLogger: ILogger
+    ) {
+        this.logger = baseLogger.child({
+            handler: 'OrderPaidWebhookHandler',
+            topic: this.topic
+        });
+    }
 
     async handle({ payload, graphqlClient }: ShopifyWebhookContext<OrderPaidPayload>): Promise<void> {
-        const existingOrder = await this.orderRepository.findByOrderId(payload.id.toString());
-        if (existingOrder) {
-            return;
-        }
+        const shopSummary = generateOrderSummary(payload, 'shop_money');
+        this.logger.info('Shop Currency Summary', {
+            data: shopSummary
+        });
 
-        const ticketNumber = await this.ticketNumberGenerator.findOrGenerateTicketForDocument('order', payload.id);
+        const ticketDocument = await this.ticketNumberGenerator.findOrGenerateTicket(mapToOrderTicketCreateRequest(shopSummary));
 
         const orderUpdater: IOrderTicketNumberUpdater = new ShopifyOrderTicketNumberUpdater(graphqlClient);
 
         await orderUpdater.updateOrder(
             payload.admin_graphql_api_id,
-            ticketNumber
+            ticketDocument
+        );
+    }
+
+}
+
+function getMoneyAmount(moneySet: MoneySet, moneyType: MoneyType): {
+    amount: number;
+    currency: string;
+} {
+    const money = moneySet[moneyType];
+    return {
+        amount: parseAmount(money.amount),
+        currency: money.currency_code
+    };
+}
+
+function calculateLineItemTotalDiscount(
+    discountAllocations: DiscountAllocation[],
+    moneyType: MoneyType
+): number {
+    return roundToTwoDecimals(
+        discountAllocations.reduce((sum, discount) =>
+            safeAdd(sum, getMoneyAmount(discount.amount_set, moneyType).amount),
+            0
+        )
+    );
+}
+
+function calculateLineItemBaseAmount(
+    lineItem: OrderLineItem,
+    moneyType: MoneyType
+): {
+    netPrice: number;
+    taxRates: Array<{
+        rate: number;
+        taxAmount: number;
+        title: string;
+    }>;
+    currency: string;
+} {
+    const { amount: basePrice, currency } = getMoneyAmount(lineItem.price_set, moneyType);
+    const totalBasePrice = safeMultiply(basePrice, lineItem.quantity);
+    const totalDiscount = calculateLineItemTotalDiscount(lineItem.discount_allocations, moneyType);
+    const netPrice = roundToTwoDecimals(totalBasePrice - totalDiscount);
+
+    const taxRates = lineItem.tax_lines.map(taxLine => ({
+        rate: taxLine.rate,
+        taxAmount: getMoneyAmount(taxLine.price_set, moneyType).amount,
+        title: taxLine.title
+    }));
+
+    return {
+        netPrice,
+        taxRates,
+        currency
+    };
+}
+
+function groupLineItemsByTaxRate(
+    order: OrderPaidPayload,
+    moneyType: MoneyType
+): Map<number, {
+    price: number;
+    tax: number;
+    title: string;
+    currency: string;
+}> {
+    const taxGroups = new Map<number, {
+        price: number;
+        tax: number;
+        title: string;
+        currency: string;
+    }>();
+
+    order.line_items.forEach(lineItem => {
+        const { netPrice, taxRates, currency } = calculateLineItemBaseAmount(lineItem, moneyType);
+
+        // Calculate total tax rate for proportional distribution
+        const totalTaxRate = roundToTwoDecimals(
+            taxRates.reduce((sum, tax) => safeAdd(sum, tax.rate), 0)
         );
 
-        const order: Order = {
-            id: payload.id.toString(),
-            orderName: payload.name,
-            orderNumber: payload.order_number,
-            ticketNumber,
-            createdAt: new Date(payload.created_at),
-            totalPrice: parseFloat(payload.total_price),
-            totalDiscounts: parseFloat(payload.total_discounts),
-            totalTax: parseFloat(payload.total_tax),
-            taxesIncluded: payload.taxes_included,
-            items: payload.line_items.map(item => ({
-                id: item.id,
-                title: item.title,
-                quantity: item.quantity,
-                price: parseFloat(item.price),
-                totalDiscount: parseFloat(item.total_discount),
-                taxLines: (item.tax_lines || []).map(taxLine => ({
-                    rate: taxLine.rate,
-                    title: taxLine.title,
-                    price: parseFloat(taxLine.price)
-                }))
-            }))
-        };
+        taxRates.forEach(({ rate, taxAmount, title }) => {
+            if (!taxGroups.has(rate)) {
+                taxGroups.set(rate, {
+                    price: 0,
+                    tax: 0,
+                    title,
+                    currency
+                });
+            }
 
-        await this.orderRepository.save(order);
+            const group = taxGroups.get(rate)!;
+
+            // Distribute net price proportionally based on tax rate
+            const priceShare = safeMultiply(netPrice, safeDivide(rate, totalTaxRate));
+            const priceWithoutTax = order.taxes_included
+                ? safeDivide(priceShare, (1 + rate))
+                : priceShare;
+
+            group.price = safeAdd(group.price, priceWithoutTax);
+            group.tax = safeAdd(group.tax, taxAmount);
+        });
+    });
+
+    return taxGroups;
+}
+
+function generateOrderSummary(
+    order: OrderPaidPayload,
+    moneyType: MoneyType = 'shop_money'
+): OrderSummary {
+    const taxGroups = groupLineItemsByTaxRate(order, moneyType);
+    const { amount: totalAmount, currency } = getMoneyAmount(order.total_price_set, moneyType);
+
+    let tax_lines: SummaryTaxLine[] = Array.from(taxGroups.entries())
+        .map(([rate, group]) => ({
+            price: roundToTwoDecimals(group.price),
+            tax: roundToTwoDecimals(group.tax),
+            rate,
+            title: group.title,
+            currency: group.currency
+        }));
+
+    // Handle rounding
+    const calculatedTotal = tax_lines.reduce(
+        (sum, group) => safeAdd(sum, safeAdd(group.price, group.tax)),
+        0
+    );
+
+    const discrepancy = roundToTwoDecimals(totalAmount - calculatedTotal);
+
+    if (Math.abs(discrepancy) > 0.01) {
+        const largestGroup = tax_lines.reduce(
+            (max, current) => current.price > max.price ? current : max,
+            tax_lines[0]
+        );
+        largestGroup.price = roundToTwoDecimals(largestGroup.price + discrepancy);
     }
+
+    return {
+        id: order.id,
+        created_at: order.created_at,
+        totalAmount: roundToTwoDecimals(totalAmount),
+        currency,
+        tax_lines
+    };
 }

@@ -1,13 +1,34 @@
+import { OrderTicketDocument, RefundTicketDocument, TicketDocument } from "../entities/Ticket";
+import { OrderTicketCreateRequest, RefundTicketCreateRequest, TicketCreateRequest } from "../entities/TicketCreateRequest";
+
 export interface ITicketNumberGenerator {
     /**
-     * Finds an existing ticket for the given document or generates a new one if none exists.
-     * The operation is atomic - if multiple calls happen simultaneously for the same document,
-     * only one ticket will be generated and the others will receive the same ticket.
+     * Atomically finds or generates a ticket for the given request.
+     * If a ticket already exists for the specified order_id (and refund_id for refunds),
+     * returns the existing ticket. Otherwise, generates a new ticket with a unique number.
      * 
-     * @param documentType - The type of document (e.g., 'order')
-     * @param documentId - The unique identifier of the document (e.g., Shopify order ID)
-     * @returns Promise<string> - The ticket number (either existing or newly generated)
-     * @throws Error if ticket generation fails after retries
+     * The operation is atomic - if multiple calls happen simultaneously for the same request,
+     * only one ticket will be generated and all calls will receive the same ticket.
+     * 
+     * @param request - The ticket creation request containing all necessary information
+     *                 Can be either OrderTicketCreateRequest or RefundTicketCreateRequest
+     * 
+     * @returns Promise<TicketDocument> - The ticket document (either existing or newly generated)
+     *                                   Will be either OrderTicketDocument or RefundTicketDocument
+     *                                   depending on the request type
+     * 
+     * @throws Error if ticket generation fails after maximum retries
+     * @throws Error if there's a data consistency issue
      */
-    findOrGenerateTicketForDocument(documentType: string, documentId: string): Promise<string>;
+    findOrGenerateTicket(request: TicketCreateRequest): Promise<TicketDocument>;
+
+    /**
+     * Type-safe version for order tickets specifically
+     */
+    findOrGenerateTicket(request: OrderTicketCreateRequest): Promise<OrderTicketDocument>;
+
+    /**
+     * Type-safe version for refund tickets specifically
+     */
+    findOrGenerateTicket(request: RefundTicketCreateRequest): Promise<RefundTicketDocument>;
 }

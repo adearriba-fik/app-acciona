@@ -4,7 +4,7 @@ import {
   AppDistribution,
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
-import { logger } from "./modules/modules.server";
+import { logger, modules } from "./modules/modules.server";
 import { ShopifyLogger } from "./modules/shared/infrastructure/logging/ShopifyLogger";
 import { InMemorySessionStorageDecorator } from "./utils/sessionStorage";
 import { cosmosDBSessionStorage, initializeCosmosDatabase } from "./db.server";
@@ -24,6 +24,12 @@ const shopify = shopifyApp({
   logger: {
     level: shopifyLogger.level,
     log: shopifyLogger.log.bind(shopifyLogger),
+  },
+  hooks: {
+    afterAuth: async (options) => {
+      const ticketModules = await modules.tickets;
+      await ticketModules.onInstall(options.admin.graphql);
+    },
   },
   future: {
     unstable_newEmbeddedAuthStrategy: true,

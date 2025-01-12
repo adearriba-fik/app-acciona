@@ -3,18 +3,18 @@
 client_id = "922282a3229a4b63a8241b2032e1f9d3"
 name = "app-acciona"
 handle = "app-acciona"
-application_url = "https://reward-powder-su-korea.trycloudflare.com"
+application_url = "https://awareness-passes-acre-guidance.trycloudflare.com"
 embedded = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_orders,write_orders"
+scopes = "read_orders,write_orders,write_metaobject_definitions,write_metaobjects"
 
 [auth]
 redirect_urls = [
-  "https://reward-powder-su-korea.trycloudflare.com/auth/callback",
-  "https://reward-powder-su-korea.trycloudflare.com/auth/shopify/callback",
-  "https://reward-powder-su-korea.trycloudflare.com/api/auth/callback"
+  "https://awareness-passes-acre-guidance.trycloudflare.com/auth/callback",
+  "https://awareness-passes-acre-guidance.trycloudflare.com/auth/shopify/callback",
+  "https://awareness-passes-acre-guidance.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
@@ -35,10 +35,6 @@ api_version = "2025-01"
   [[webhooks.subscriptions]]
   topics = [ "refunds/create" ]
   uri = "/webhooks/refunds/create"
-
-  [[webhooks.subscriptions]]
-  topics = [ "order_transactions/create" ]
-  uri = "/webhooks/order_transactions/create"
 
 [pos]
 embedded = false

@@ -1,5 +1,7 @@
+import { TicketDocument } from "../entities/Ticket";
+
 export interface IOrderTicketNumberUpdater {
   updateOrder(
     shopifyGraphqlOrderId: string,
-    ticketNumber: string): Promise<void>;
+    ticketDocument: TicketDocument): Promise<void>;
 }

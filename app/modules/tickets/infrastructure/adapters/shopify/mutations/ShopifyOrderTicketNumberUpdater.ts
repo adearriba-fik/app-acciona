@@ -1,25 +1,26 @@
+import { TicketDocument } from 'app/modules/tickets/domain/entities/Ticket';
 import { IOrderTicketNumberUpdater } from 'app/modules/tickets/domain/ports/IOrderTicketNumberUpdater';
-import { AttributeInput } from 'app/types/admin.types';
 import { AdminApiContextWithoutRest } from 'node_modules/@shopify/shopify-app-remix/dist/ts/server/clients';
+import { ticket_metafield_namespace } from '../constants';
 
-const GET_ORDER_ATTRIBUTES = `#graphql
-  query getOrderAttributes($id: ID!) {
+const GET_ORDER_TICKETS = `#graphql
+  query getOrderTickets($id: ID!, $namespace: String!) {
     order(id: $id) {
       id
-      customAttributes {
-        key
+      metafield(namespace: $namespace, key: "tickets") {
         value
       }
     }
   }
 `;
 
-const UPDATE_ORDER_METAFIELD = `#graphql
-  mutation updateOrderAttributes($input: OrderInput!) {
-    orderUpdate(input: $input) {
-      order {
+const UPSERT_TICKET_METAOBJECT = `#graphql
+  mutation upsertTicketMetaobject($handle: MetaobjectHandleInput!, $metaobject: MetaobjectUpsertInput!) {
+    metaobjectUpsert(handle: $handle, metaobject: $metaobject) {
+      metaobject {
         id
-        customAttributes {
+        handle
+        fields {
           key
           value
         }
@@ -27,6 +28,26 @@ const UPDATE_ORDER_METAFIELD = `#graphql
       userErrors {
         field
         message
+        code
+      }
+    }
+  }
+`;
+
+const UPDATE_ORDER_TICKETS = `#graphql
+  mutation updateOrderTickets($metafields: [MetafieldsSetInput!]!) {
+    metafieldsSet(metafields: $metafields) {
+      metafields {
+        key
+        namespace
+        value
+        createdAt
+        updatedAt
+      }
+      userErrors {
+        field
+        message
+        code
       }
     }
   }
@@ -35,55 +56,114 @@ const UPDATE_ORDER_METAFIELD = `#graphql
 export class ShopifyOrderTicketNumberUpdater implements IOrderTicketNumberUpdater {
   constructor(private readonly graphqlClient: AdminApiContextWithoutRest['graphql']) { }
 
-  private async getOrderAttributes(shopifyGraphqlOrderId: string) {
-    const response = await this.graphqlClient(GET_ORDER_ATTRIBUTES, {
-      variables: {
-        id: shopifyGraphqlOrderId,
-      }
-    });
-
-    const orderResponse = await response.json();
-    return orderResponse.data?.order?.customAttributes ?? [];
-  }
-
   async updateOrder(
     shopifyGraphqlOrderId: string,
-    ticketNumber: string,
+    ticketDocument: TicketDocument,
   ): Promise<void> {
-    const currentAttributes = await this.getOrderAttributes(shopifyGraphqlOrderId);
+    // First, create the ticket metaobject
+    const ticketMetaobject = await this.upsertTicketMetaobject(ticketDocument);
 
-    const updatedAttributes: AttributeInput[] = [
-      ...currentAttributes?.map(attr => ({
-        key: attr.key,
-        value: attr.value!
-      })),
-      {
-        key: 'ticketNumber',
-        value: ticketNumber
-      }
-    ];
+    // Then get current tickets
+    const currentTickets = await this.getOrderTickets(shopifyGraphqlOrderId);
 
-    const response = await this.graphqlClient(UPDATE_ORDER_METAFIELD, {
+    // Add new ticket to the list if it doesn't exist
+    if (!currentTickets.includes(ticketMetaobject!.id)) {
+      const updatedTickets = [...currentTickets, ticketMetaobject!.id];
+      await this.updateOrderTickets(shopifyGraphqlOrderId, updatedTickets);
+    }
+  }
+
+  private async upsertTicketMetaobject(ticketDocument: TicketDocument) {
+    const response = await this.graphqlClient(UPSERT_TICKET_METAOBJECT, {
       variables: {
-        input: {
-          id: shopifyGraphqlOrderId,
-          customAttributes: updatedAttributes
+        handle: {
+          type: "$app:ticket_number",
+          handle: ticketDocument.id
+        },
+        metaobject: {
+          fields: [
+            {
+              key: "ticket_number",
+              value: ticketDocument.id
+            },
+            {
+              key: "reference_id",
+              value: ticketDocument.type == 'order' ?
+                ticketDocument.order_id.toString() :
+                ticketDocument.refund_id.toString()
+            },
+            {
+              key: "type",
+              value: ticketDocument.type
+            },
+            {
+              key: "created_at",
+              value: new Date(ticketDocument.created_at).toISOString()
+            }
+          ]
         }
       }
     });
 
-    const mutationResponse = await response.json();
+    const result = await response.json();
 
-    if (!mutationResponse.data?.orderUpdate) {
-      throw new Error();
+    if (result.data?.metaobjectUpsert?.userErrors &&
+      result.data?.metaobjectUpsert?.userErrors?.length > 0) {
+      throw new Error(
+        `Failed to upsert ticket metaobject: ${result.data.metaobjectUpsert.userErrors
+          .map((error: any) => `${error.field}: ${error.message}`)
+          .join(', ')}`
+      );
     }
 
-    if (mutationResponse.data.orderUpdate.userErrors.length > 0) {
+    return result.data!.metaobjectUpsert!.metaobject;
+  }
+
+  private async getOrderTickets(orderId: string): Promise<string[]> {
+    const response = await this.graphqlClient(GET_ORDER_TICKETS, {
+      variables: {
+        id: orderId,
+        namespace: ticket_metafield_namespace
+      }
+    });
+
+    const result = await response.json();
+    const ticketsValue = result.data?.order?.metafield?.value;
+
+    if (ticketsValue) {
+      try {
+        return JSON.parse(ticketsValue);
+      } catch (e) {
+        return [];
+      }
+    }
+
+    return [];
+  }
+
+  private async updateOrderTickets(orderId: string, ticketIds: string[]) {
+    const response = await this.graphqlClient(UPDATE_ORDER_TICKETS, {
+      variables: {
+        metafields: [
+          {
+            ownerId: orderId,
+            namespace: ticket_metafield_namespace,
+            key: "tickets",
+            type: "list.metaobject_reference",
+            value: JSON.stringify(ticketIds)
+          }
+        ]
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.data?.metafieldsSet?.userErrors &&
+      result.data?.metafieldsSet?.userErrors?.length > 0) {
       throw new Error(
-        `Failed to update order metafield: ${mutationResponse.data.orderUpdate.userErrors
-          .map(error => `${error.field}: ${error.message}`)
-          .join(', ')
-        }`
+        `Failed to update order tickets: ${result.data.metafieldsSet.userErrors
+          .map((error: any) => `${error.field}: ${error.message}`)
+          .join(', ')}`
       );
     }
   }

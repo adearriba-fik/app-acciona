@@ -3,10 +3,13 @@ import { ILogger } from './ILogger';
 
 export class WinstonLogger implements ILogger {
     private logger: winston.Logger;
+    private defaultMeta: Record<string, unknown>;
     level: string;
 
-    constructor() {
+    constructor(defaultMeta: Record<string, unknown> = { service: 'acciona-app' }) {
         this.level = process.env.LOG_LEVEL ? process.env.LOG_LEVEL : process.env.NODE_ENV === 'development' ? 'debug' : 'info';
+
+        this.defaultMeta = defaultMeta;
 
         this.logger = winston.createLogger({
             level: this.level,
@@ -24,6 +27,13 @@ export class WinstonLogger implements ILogger {
                     ),
                 }),
             ],
+        });
+    }
+
+    child(meta: Record<string, unknown>): ILogger {
+        return new WinstonLogger({
+            ...this.defaultMeta,
+            ...meta
         });
     }
 

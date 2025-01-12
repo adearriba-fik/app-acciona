@@ -1,70 +1,88 @@
-import { cosmosDbClient } from "../modules.server";
+import { AdminApiContextWithoutRest } from "node_modules/@shopify/shopify-app-remix/dist/ts/server/clients";
+import { cosmosDbClient, logger } from "../modules.server";
 import { IShopifyWebhookHandler } from "../shared/domain/ports/IShopifyWebhookHandler";
 import { OrderPaidWebhookHandler } from "./application/OrderPaidWebhookHandler";
-import { RefundCreateWebhookHandler } from "./application/RefundCreateWebhookHandler";
-import { TransactionCreateWebhookHandler } from "./application/TransactionCreateWebhookHandler";
 import { OrderPaidPayload } from "./domain/entities/OrderPaidPayload";
-import { RefundCreatePayload } from "./domain/entities/RefundCreatePayload";
-import { TransactionCreatePayload } from "./domain/entities/TransactionCreatePayload";
-import { IOrderRepository } from "./domain/ports/IOrderRepository";
-import { IRefundRepository } from "./domain/ports/IRefundRepository";
 import { ITicketNumberGenerator } from "./domain/ports/ITicketNumberGenerator";
-import { ITransactionRepository } from "./domain/ports/ITransactionRepository";
-import { CosmosOrderRepository } from "./infrastructure/adapters/cosmosdb/CosmosOrderRepository";
-import { CosmosRefundRepository } from "./infrastructure/adapters/cosmosdb/CosmosRefundRepository";
 import { CosmosTicketNumberGenerator } from "./infrastructure/adapters/cosmosdb/CosmosTicketNumberGenerator";
-import { CosmosTransactionRepository } from "./infrastructure/adapters/cosmosdb/CosmosTransactionRepository";
+import { IMetaobjectInstaller } from "./domain/ports/IMetaobjectInstaller";
+import { ShopifyMetaobjectInstaller } from "./infrastructure/adapters/shopify/metaobject/ShopifyMetaobjectInstaller";
+import { RefundCreatePayload } from "./domain/entities/RefundCreatedPayload";
+import { RefundCreatedWebhookHandler } from "./application/RefundCreatedWebhookHandler";
+import { ContainerRequest } from "@azure/cosmos";
 
-const ORDERS_CONTAINER = "Orders";
 const TICKETS_CONTAINER = "Tickets";
-const REFUNDS_CONTAINER = "Refunds";
-const TRANSACTIONS_CONTAINER = "Transactions";
+const ticketsContainerConfig: Partial<ContainerRequest> = {
+    partitionKey: {
+        paths: ["/year"],
+        version: 2,
+    },
+    uniqueKeyPolicy: {
+        uniqueKeys: [
+            {
+                paths: ["/order_id", "/type"]
+            },
+            {
+                paths: ["/refund_id", "/type"]
+            }
+        ]
+    },
+    indexingPolicy: {
+        indexingMode: "consistent",
+        automatic: true,
+        includedPaths: [
+            {
+                path: "/year/?"
+            },
+            {
+                path: "/type/?"
+            },
+            {
+                path: "/order_id/?"
+            },
+            {
+                path: "/refund_id/?"
+            }
+        ],
+        excludedPaths: [
+            {
+                path: "/tax_lines/*"
+            },
+            {
+                path: "/*"
+            }
+        ]
+    }
+};
 
 export interface ITicketNumberingModuleApi {
     getOrderPaidWebhookHandler(): IShopifyWebhookHandler<OrderPaidPayload>;
     getRefundCreateWebhookHandler(): IShopifyWebhookHandler<RefundCreatePayload>;
-    getTransactionCreateWebhookHandler(): IShopifyWebhookHandler<TransactionCreatePayload>;
+    onInstall(graphqlClient: AdminApiContextWithoutRest['graphql']): Promise<void>;
 }
 
 export class TicketNumberingModule implements ITicketNumberingModuleApi {
     private readonly orderPaidWebhookHandler: OrderPaidWebhookHandler;
-    private readonly refundCreateWebhookHandler: RefundCreateWebhookHandler;
-    private readonly transactionCreateWebhookHandler: TransactionCreateWebhookHandler;
+    private readonly refundCreateWebhookHandler: RefundCreatedWebhookHandler;
 
     private constructor(
-        orderRepository: IOrderRepository,
-        refundRepository: IRefundRepository,
-        transactionRepository: ITransactionRepository,
         ticketNumberGenerator: ITicketNumberGenerator,
     ) {
         this.orderPaidWebhookHandler = new OrderPaidWebhookHandler(
-            orderRepository,
-            ticketNumberGenerator
+            ticketNumberGenerator,
+            logger,
         );
-        this.refundCreateWebhookHandler = new RefundCreateWebhookHandler(
-            refundRepository
+        this.refundCreateWebhookHandler = new RefundCreatedWebhookHandler(
+            ticketNumberGenerator,
+            logger,
         );
-        this.transactionCreateWebhookHandler = new TransactionCreateWebhookHandler(transactionRepository);
     }
 
     public static async create(): Promise<TicketNumberingModule> {
-        const orderRepository = new CosmosOrderRepository(
-            await cosmosDbClient.getContainer(ORDERS_CONTAINER)
-        );
-        const refundRepository = new CosmosRefundRepository(
-            await cosmosDbClient.getContainer(REFUNDS_CONTAINER)
-        );
-        const transactionRepository = new CosmosTransactionRepository(
-            await cosmosDbClient.getContainer(TRANSACTIONS_CONTAINER)
-        );
-        const ticketNumberGenerator = new CosmosTicketNumberGenerator(
-            await cosmosDbClient.getContainer(TICKETS_CONTAINER)
-        );
+        const ticketContainer = await cosmosDbClient.getContainer(TICKETS_CONTAINER, ticketsContainerConfig);
+        const ticketNumberGenerator = new CosmosTicketNumberGenerator(ticketContainer, logger);
 
         return new TicketNumberingModule(
-            orderRepository,
-            refundRepository,
-            transactionRepository,
             ticketNumberGenerator
         );
     }
@@ -73,11 +91,12 @@ export class TicketNumberingModule implements ITicketNumberingModuleApi {
         return this.orderPaidWebhookHandler;
     }
 
-    public getRefundCreateWebhookHandler(): RefundCreateWebhookHandler {
+    public getRefundCreateWebhookHandler(): RefundCreatedWebhookHandler {
         return this.refundCreateWebhookHandler;
     }
 
-    public getTransactionCreateWebhookHandler(): TransactionCreateWebhookHandler {
-        return this.transactionCreateWebhookHandler;
+    public async onInstall(graphqlClient: AdminApiContextWithoutRest['graphql']): Promise<void> {
+        const metaobjectInstaller: IMetaobjectInstaller = new ShopifyMetaobjectInstaller(graphqlClient, logger);
+        await metaobjectInstaller.install();
     }
 }
