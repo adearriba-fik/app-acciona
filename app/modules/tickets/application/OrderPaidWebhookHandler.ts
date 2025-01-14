@@ -4,7 +4,6 @@ import { ITicketNumberGenerator } from "app/modules/tickets/domain/ports/ITicket
 import { IShopifyWebhookHandler } from "app/modules/shared/domain/ports/IShopifyWebhookHandler";
 import { ShopifyWebhookContext } from "app/modules/shared/domain/ports/ShopifyWebhookContext";
 import { IOrderTicketNumberUpdater } from "../domain/ports/IOrderTicketNumberUpdater";
-import { ShopifyOrderTicketNumberUpdater } from "../infrastructure/adapters/shopify/mutations/ShopifyOrderTicketNumberUpdater";
 import { OrderLineItem, OrderPaidPayload } from "../domain/entities/OrderPaidPayload";
 import { MoneyType } from "../domain/entities/MoneyType";
 import { DiscountAllocation } from "../domain/entities/DiscountAllocation";
@@ -44,9 +43,10 @@ export class OrderPaidWebhookHandler implements IShopifyWebhookHandler<OrderPaid
 
         const ticketDocument = await this.ticketNumberGenerator.findOrGenerateTicket(mapToOrderTicketCreateRequest(shopSummary));
 
-        const orderUpdater: IOrderTicketNumberUpdater = new ShopifyOrderTicketNumberUpdater(graphqlClient);
+        const orderUpdater: IOrderTicketNumberUpdater = (await modules.tickets).getOrderTicketNumberUpdater();
 
         await orderUpdater.updateOrder(
+            shop,
             payload.admin_graphql_api_id,
             ticketDocument
         );

@@ -1,3 +1,4 @@
+import { IReportingModuleApi, ReportingModule } from "./reports/ReportingModule";
 import { CosmosDbClient } from "./shared/infrastructure/cosmosdb/CosmosDbClient";
 import { ILogger } from "./shared/infrastructure/logging/ILogger";
 import { WinstonLogger } from "./shared/infrastructure/logging/WinstonLogger";
@@ -43,6 +44,10 @@ class Modules {
 
     public get storeConfig(): IStoreConfigModuleApi {
         return this.getOrCreateModule('store-config', () => StoreConfigModule.create());
+    }
+
+    public get reports(): Promise<IReportingModuleApi> {
+        return this.getOrCreateModuleAsync('reports', () => ReportingModule.create());
     }
 }
 

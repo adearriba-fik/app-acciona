@@ -27,8 +27,8 @@ export class RefundCreatedWebhookHandler implements IShopifyWebhookHandler<Refun
     }
 
     async handle({ payload, shop, graphqlClient }: ShopifyWebhookContext<RefundCreatePayload>): Promise<void> {
-        if (payload.refund_line_items.length == 0) {
-            this.logger.info("Discarded: Empty refund_line_items array.");
+        if (payload.refund_line_items.length == 0 || payload.transactions.length == 0) {
+            this.logger.info(`Discarded: Empty ${payload.refund_line_items.length == 0 ? 'refund_line_items' : 'transactions'} array. This is an exchange.`);
             return;
         }
 
@@ -49,9 +49,10 @@ export class RefundCreatedWebhookHandler implements IShopifyWebhookHandler<Refun
 
         const ticketDocument = await this.ticketNumberGenerator.findOrGenerateTicket(mapToRefundTicketCreateRequest(shopSummary));
 
-        const orderUpdater: IOrderTicketNumberUpdater = new ShopifyOrderTicketNumberUpdater(graphqlClient);
+        const orderUpdater: IOrderTicketNumberUpdater = (await modules.tickets).getOrderTicketNumberUpdater();
 
         await orderUpdater.updateOrder(
+            shop,
             `gid://shopify/Order/${payload.order_id}`,
             ticketDocument
         );

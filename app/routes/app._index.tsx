@@ -28,7 +28,6 @@ export default function Index() {
   return (
     <Page
       title="Configuración global"
-      fullWidth
     >
       <Layout>
         <Layout.Section>

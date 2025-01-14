@@ -3,7 +3,7 @@
 client_id = "922282a3229a4b63a8241b2032e1f9d3"
 name = "fik - Acciona"
 handle = "fik-acciona"
-application_url = "https://cruz-golden-herb-contributed.trycloudflare.com"
+application_url = "https://writers-determination-bell-narrow.trycloudflare.com"
 embedded = true
 
 [access_scopes]
@@ -12,9 +12,9 @@ scopes = "read_orders,write_orders,write_metaobject_definitions,write_metaobject
 
 [auth]
 redirect_urls = [
-  "https://cruz-golden-herb-contributed.trycloudflare.com/auth/callback",
-  "https://cruz-golden-herb-contributed.trycloudflare.com/auth/shopify/callback",
-  "https://cruz-golden-herb-contributed.trycloudflare.com/api/auth/callback"
+  "https://writers-determination-bell-narrow.trycloudflare.com/auth/callback",
+  "https://writers-determination-bell-narrow.trycloudflare.com/auth/shopify/callback",
+  "https://writers-determination-bell-narrow.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

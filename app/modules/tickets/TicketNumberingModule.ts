@@ -10,6 +10,8 @@ import { ShopifyMetaobjectInstaller } from "./infrastructure/adapters/shopify/me
 import { RefundCreatePayload } from "./domain/entities/RefundCreatedPayload";
 import { RefundCreatedWebhookHandler } from "./application/RefundCreatedWebhookHandler";
 import { ContainerRequest } from "@azure/cosmos";
+import { IOrderTicketNumberUpdater } from "./domain/ports/IOrderTicketNumberUpdater";
+import { ShopifyOrderTicketNumberUpdater } from "./infrastructure/adapters/shopify/mutations/ShopifyOrderTicketNumberUpdater";
 
 const TICKETS_CONTAINER = "Tickets";
 const ticketsContainerConfig: Partial<ContainerRequest> = {
@@ -58,12 +60,14 @@ const ticketsContainerConfig: Partial<ContainerRequest> = {
 export interface ITicketNumberingModuleApi {
     getOrderPaidWebhookHandler(): IShopifyWebhookHandler<OrderPaidPayload>;
     getRefundCreateWebhookHandler(): IShopifyWebhookHandler<RefundCreatePayload>;
+    getOrderTicketNumberUpdater(): IOrderTicketNumberUpdater;
     onInstall(graphqlClient: AdminApiContextWithoutRest['graphql']): Promise<void>;
 }
 
 export class TicketNumberingModule implements ITicketNumberingModuleApi {
     private readonly orderPaidWebhookHandler: OrderPaidWebhookHandler;
     private readonly refundCreateWebhookHandler: RefundCreatedWebhookHandler;
+    private readonly orderTicketNumberUpdater: IOrderTicketNumberUpdater;
 
     private constructor(
         ticketNumberGenerator: ITicketNumberGenerator,
@@ -76,6 +80,7 @@ export class TicketNumberingModule implements ITicketNumberingModuleApi {
             ticketNumberGenerator,
             logger,
         );
+        this.orderTicketNumberUpdater = new ShopifyOrderTicketNumberUpdater();
     }
 
     public static async create(): Promise<TicketNumberingModule> {
@@ -93,6 +98,10 @@ export class TicketNumberingModule implements ITicketNumberingModuleApi {
 
     public getRefundCreateWebhookHandler(): RefundCreatedWebhookHandler {
         return this.refundCreateWebhookHandler;
+    }
+
+    public getOrderTicketNumberUpdater(): IOrderTicketNumberUpdater {
+        return this.orderTicketNumberUpdater;
     }
 
     public async onInstall(graphqlClient: AdminApiContextWithoutRest['graphql']): Promise<void> {

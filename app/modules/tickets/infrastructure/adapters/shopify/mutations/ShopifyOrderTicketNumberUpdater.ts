@@ -2,6 +2,7 @@ import { TicketDocument } from 'app/modules/tickets/domain/entities/Ticket';
 import { IOrderTicketNumberUpdater } from 'app/modules/tickets/domain/ports/IOrderTicketNumberUpdater';
 import { AdminApiContextWithoutRest } from 'node_modules/@shopify/shopify-app-remix/dist/ts/server/clients';
 import { ticket_metafield_namespace } from '../constants';
+import { unauthenticated } from 'app/shopify.server';
 
 const GET_ORDER_TICKETS = `#graphql
   query getOrderTickets($id: ID!, $namespace: String!) {
@@ -54,27 +55,29 @@ const UPDATE_ORDER_TICKETS = `#graphql
 `;
 
 export class ShopifyOrderTicketNumberUpdater implements IOrderTicketNumberUpdater {
-  constructor(private readonly graphqlClient: AdminApiContextWithoutRest['graphql']) { }
+  constructor() { }
 
   async updateOrder(
+    shop: string,
     shopifyGraphqlOrderId: string,
     ticketDocument: TicketDocument,
   ): Promise<void> {
+    const { admin } = await unauthenticated.admin(shop);
     // First, create the ticket metaobject
-    const ticketMetaobject = await this.upsertTicketMetaobject(ticketDocument);
+    const ticketMetaobject = await this.upsertTicketMetaobject(ticketDocument, admin.graphql);
 
     // Then get current tickets
-    const currentTickets = await this.getOrderTickets(shopifyGraphqlOrderId);
+    const currentTickets = await this.getOrderTickets(shopifyGraphqlOrderId, admin.graphql);
 
     // Add new ticket to the list if it doesn't exist
     if (!currentTickets.includes(ticketMetaobject!.id)) {
       const updatedTickets = [...currentTickets, ticketMetaobject!.id];
-      await this.updateOrderTickets(shopifyGraphqlOrderId, updatedTickets);
+      await this.updateOrderTickets(shopifyGraphqlOrderId, updatedTickets, admin.graphql);
     }
   }
 
-  private async upsertTicketMetaobject(ticketDocument: TicketDocument) {
-    const response = await this.graphqlClient(UPSERT_TICKET_METAOBJECT, {
+  private async upsertTicketMetaobject(ticketDocument: TicketDocument, graphqlClient: AdminApiContextWithoutRest['graphql']) {
+    const response = await graphqlClient(UPSERT_TICKET_METAOBJECT, {
       variables: {
         handle: {
           type: "$app:ticket_number",
@@ -119,8 +122,8 @@ export class ShopifyOrderTicketNumberUpdater implements IOrderTicketNumberUpdate
     return result.data!.metaobjectUpsert!.metaobject;
   }
 
-  private async getOrderTickets(orderId: string): Promise<string[]> {
-    const response = await this.graphqlClient(GET_ORDER_TICKETS, {
+  private async getOrderTickets(orderId: string, graphqlClient: AdminApiContextWithoutRest['graphql']): Promise<string[]> {
+    const response = await graphqlClient(GET_ORDER_TICKETS, {
       variables: {
         id: orderId,
         namespace: ticket_metafield_namespace
@@ -141,8 +144,8 @@ export class ShopifyOrderTicketNumberUpdater implements IOrderTicketNumberUpdate
     return [];
   }
 
-  private async updateOrderTickets(orderId: string, ticketIds: string[]) {
-    const response = await this.graphqlClient(UPDATE_ORDER_TICKETS, {
+  private async updateOrderTickets(orderId: string, ticketIds: string[], graphqlClient: AdminApiContextWithoutRest['graphql']) {
+    const response = await graphqlClient(UPDATE_ORDER_TICKETS, {
       variables: {
         metafields: [
           {
