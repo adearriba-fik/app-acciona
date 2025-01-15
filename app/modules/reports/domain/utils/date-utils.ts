@@ -1,66 +1,152 @@
-/**
- * Gets the start of a month in Madrid timezone (handles CET/CEST automatically)
- * @param year The year
- * @param month The month (1-12)
- * @returns Date object in UTC representing start of month in Madrid time
- */
-export function getMonthStartMadrid(year: number, month: number): Date {
-    // Create date string in Madrid timezone
-    const dateStr = `${year}-${month.toString().padStart(2, '0')}-01T00:00:00`;
-    // Convert to Date object considering Madrid timezone
-    const date = new Date(dateStr);
-    // Get UTC timestamp considering Madrid timezone offset
-    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
-    return utcDate;
-}
+export class TimezoneManager {
+    /**
+     * Creates a UTC Date that will represent the target time in the specified timezone
+     */
+    static createInTimezone(
+        year: number,
+        month: number,
+        day: number,
+        hour: number,
+        minute: number,
+        second: number,
+        millisecond: number,
+        timezone: string
+    ): Date {
+        // Create the date string without forcing UTC
+        const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}` +
+            `T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}.${millisecond.toString().padStart(3, '0')}`;
 
-/**
- * Gets the end of a month in Madrid timezone (handles CET/CEST automatically)
- * @param year The year
- * @param month The month (1-12)
- * @returns Date object in UTC representing end of month in Madrid time
- */
-export function getMonthEndMadrid(year: number, month: number): Date {
-    // Get the last day of the month
-    const lastDay = new Date(year, month, 0).getDate();
-    // Create date string in Madrid timezone
-    const dateStr = `${year}-${month.toString().padStart(2, '0')}-${lastDay}T23:59:59.999`;
-    // Convert to Date object considering Madrid timezone
-    const date = new Date(dateStr);
-    // Get UTC timestamp considering Madrid timezone offset
-    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
-    return utcDate;
-}
+        // Create a date object in the target timezone
+        const options: Intl.DateTimeFormatOptions = {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            fractionalSecondDigits: 3,
+            hour12: false
+        };
 
-/**
- * Formats a UTC date to YYYYMMDD considering Madrid timezone
- * @param date The UTC Date object
- * @returns String in YYYYMMDD format according to Madrid time
- */
-export function formatDateYYYYMMDD(date: Date): string {
-    // Convert the UTC date to Madrid time
-    const madridDate = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
-    const year = madridDate.getFullYear();
-    const month = (madridDate.getMonth() + 1).toString().padStart(2, '0');
-    const day = madridDate.getDate().toString().padStart(2, '0');
-    return `${year}${month}${day}`;
-}
+        // First, create the date assuming local time
+        let date = new Date(dateStr);
 
-/**
- * Validates if a date is the last day of its month in Madrid timezone
- * @param date The UTC Date object to check
- * @returns boolean indicating if it's the last day of the month
- */
-export function isLastDayOfMonth(date: Date): boolean {
-    const madridDate = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
-    const lastDay = new Date(madridDate.getFullYear(), madridDate.getMonth() + 1, 0).getDate();
-    return madridDate.getDate() === lastDay;
-}
+        // Get the timezone offset for this specific date
+        const formatter = new Intl.DateTimeFormat('en-US', options);
+        const parts = formatter.formatToParts(date);
 
-/**
- * Gets the current date and time in Madrid timezone
- * @returns Date object representing current Madrid time
- */
-export function getCurrentMadridDate(): Date {
-    return new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+        // Extract all components
+        const actualYear = parseInt(parts.find(p => p.type === 'year')!.value);
+        const actualMonth = parseInt(parts.find(p => p.type === 'month')!.value);
+        const actualDay = parseInt(parts.find(p => p.type === 'day')!.value);
+        const actualHour = parseInt(parts.find(p => p.type === 'hour')!.value);
+        const actualMinute = parseInt(parts.find(p => p.type === 'minute')!.value);
+        const actualSecond = parseInt(parts.find(p => p.type === 'second')!.value);
+
+        // If any component doesn't match, adjust the time
+        if (actualYear !== year ||
+            actualMonth !== month ||
+            actualDay !== day ||
+            actualHour !== hour ||
+            actualMinute !== minute ||
+            actualSecond !== second) {
+
+            // Calculate the difference in milliseconds
+            const targetDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second, millisecond));
+            const offset = targetDate.getTime() - date.getTime();
+
+            // Adjust the date
+            date = new Date(date.getTime() + offset);
+        }
+
+        return date;
+    }
+
+    /**
+     * Formats a date in the specified timezone using the provided format
+     */
+    static formatInTimezone(
+        date: Date,
+        timezone: string,
+        options: Intl.DateTimeFormatOptions = {}
+    ): string {
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            ...options
+        });
+        return formatter.format(date);
+    }
+
+    /**
+     * Gets date parts in the specified timezone
+     */
+    static getPartsInTimezone(
+        date: Date,
+        timezone: string
+    ): Record<string, string> {
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            fractionalSecondDigits: 3,
+            hour12: false
+        });
+
+        const parts = formatter.formatToParts(date);
+        return parts.reduce((acc, part) => {
+            if (part.type !== 'literal') {
+                acc[part.type] = part.value;
+            }
+            return acc;
+        }, {} as Record<string, string>);
+    }
+
+    /**
+     * Formats a date as YYYYMMDD in the specified timezone
+     */
+    static formatYYYYMMDD(date: Date): string {
+        return date.getUTCFullYear().toString() +
+            (date.getUTCMonth() + 1).toString().padStart(2, '0') +
+            date.getUTCDate().toString().padStart(2, '0');
+    }
+
+    /**
+     * Creates a date representing the end of a month in the specified timezone
+     */
+    static getMonthEnd(year: number, month: number, timezone: string): Date {
+        const daysInMonth = this.getDaysInMonth(year, month);
+        return this.createInTimezone(year, month, daysInMonth, 23, 59, 59, 999, timezone);
+    }
+
+    /**
+     * Creates a date representing the start of a month in the specified timezone
+     */
+    static getMonthStart(year: number, month: number, timezone: string): Date {
+        return this.createInTimezone(year, month, 1, 0, 0, 0, 0, timezone);
+    }
+
+    /**
+     * Helper method to get the number of days in a month
+     */
+    static getDaysInMonth(year: number, month: number): number {
+        // Note: month is 1-based here
+        return new Date(year, month, 0).getDate();
+    }
+
+    /**
+     * Validates if a timezone name is valid
+     */
+    static isValidTimezone(timezone: string): boolean {
+        try {
+            Intl.DateTimeFormat('en-US', { timeZone: timezone });
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
 }

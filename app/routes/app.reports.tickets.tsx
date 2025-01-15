@@ -21,10 +21,10 @@ export async function action({ request }: ActionFunctionArgs): Promise<ActionDat
         const intent = formData.get("intent");
         const reportingModule = await modules.reports;
 
-        if (intent == 'generate') {
-            const year = Number(formData.get("year"));
-            const month = Number(formData.get("month"));
+        const year = Number(formData.get("year"));
+        const month = Number(formData.get("month"));
 
+        if (intent == 'generate') {
             if (!year || !month || month < 1 || month > 12) {
                 return {
                     success: false,
@@ -33,12 +33,24 @@ export async function action({ request }: ActionFunctionArgs): Promise<ActionDat
             }
 
             const report = await reportingModule.generateMonthlyReport(year, month);
-            const response = await reportingModule.sendReport(year, month);
+
 
             return {
                 success: true,
                 report,
-                response
+            };
+        } else if (intent == 'send') {
+            if (!year || !month || month < 1 || month > 12) {
+                return {
+                    success: false,
+                    error: "Invalid year or month"
+                };
+            }
+
+            const response = await reportingModule.sendReport(year, month);
+            return {
+                success: true,
+                response,
             };
         } else if (intent == 'retry') {
             const response = await reportingModule.retryFailedReports();
@@ -98,6 +110,12 @@ export default function ReportForm() {
         submit(formData, { method: "post" });
     }
 
+    function sendReport() {
+        const formData = new FormData(document.getElementsByName('ReportForm')[0] as HTMLFormElement);
+        formData.append("intent", "send");
+        submit(formData, { method: "post" });
+    }
+
     function resendFailures() {
         const formData = new FormData();
         formData.append("intent", "retry");
@@ -142,6 +160,14 @@ export default function ReportForm() {
                                         disabled={isSubmitting}
                                     >
                                         {isSubmitting ? "Loading..." : "Generate Report"}
+                                    </Button>
+                                    <Button
+                                        onClick={sendReport}
+                                        dataPrimaryLink
+                                        loading={isSubmitting}
+                                        disabled={isSubmitting}
+                                    >
+                                        {isSubmitting ? "Loading..." : "Send Report"}
                                     </Button>
                                     <Button
                                         onClick={resendFailures}

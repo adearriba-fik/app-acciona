@@ -10,13 +10,18 @@
     "config:use": "shopify app config use",
     "env": "shopify app env",
     "start": "remix-serve ./build/server/index.js",
-    "docker-start": "npm run setup && npm run start",
-    "setup": "prisma generate && prisma migrate deploy",
+    "docker-start": "yarn run start",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
     "shopify": "shopify",
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
-    "vite": "vite"
+    "vite": "vite",
+    "build:pre": "docker build -t fikaccionaacr.azurecr.io/pre/app-acciona --build-arg NODE_ENV=development .",
+    "build:pro": "docker build -t fikaccionaacr.azurecr.io/pro/app-acciona --build-arg NODE_ENV=production .",
+    "deploy:pre": "yarn run azure:acr && docker push fikaccionaacr.azurecr.io/pre/app-acciona:latest",
+    "deploy:pro": "yarn run azure:acr && docker push fikaccionaacr.azurecr.io/pro/app-acciona:latest",
+    "azure:login": "az account set --subscription Acciona",
+    "azure:acr": "az acr login --name fikaccionaacr"
   },
   "type": "module",
   "engines": {

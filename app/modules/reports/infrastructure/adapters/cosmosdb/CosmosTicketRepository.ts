@@ -2,7 +2,7 @@ import { Container } from "@azure/cosmos";
 import { ITicketRepository } from "../../../domain/ports/ITicketRepository";
 import { TicketDocument } from "../../../../tickets/domain/entities/Ticket";
 import { ILogger } from "app/modules/shared/infrastructure/logging/ILogger";
-import { getMonthEndMadrid, getMonthStartMadrid } from "app/modules/reports/domain/utils/date-utils";
+import { TimezoneManager } from "app/modules/reports/domain/utils/date-utils";
 
 export class CosmosTicketRepository implements ITicketRepository {
     constructor(
@@ -11,8 +11,8 @@ export class CosmosTicketRepository implements ITicketRepository {
     ) { }
 
     async *findByYearAndMonth(year: number, month: number): AsyncIterableIterator<TicketDocument> {
-        const startDate = getMonthStartMadrid(year, month);
-        const endDate = getMonthEndMadrid(year, month);
+        const startDate = TimezoneManager.getMonthStart(year, month, 'Europe/Madrid');
+        const endDate = TimezoneManager.getMonthEnd(year, month, 'Europe/Madrid');
 
         const querySpec = {
             query: "SELECT * FROM c WHERE c.year = @year AND c.created_at >= @startDate AND c.created_at <= @endDate ORDER BY c.id",

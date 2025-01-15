@@ -10,7 +10,7 @@ import { InMemorySessionStorageDecorator } from "./utils/sessionStorage";
 import { cosmosDBSessionStorage, initializeCosmosDatabase } from "./db.server";
 
 const shopifyLogger = new ShopifyLogger(logger);
-await initializeCosmosDatabase();
+initializeCosmosDatabase().catch(console.error);
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,

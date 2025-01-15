@@ -3,8 +3,8 @@ import { ITicketRepository } from "../domain/ports/ITicketRepository";
 import { MonthlyReport, MonthlyReportHeader, CustomerPosition, IncomePosition, TaxPosition } from "../domain/entities/MonthlyReport";
 import { TicketDocument } from "app/modules/tickets/domain/entities/Ticket";
 import { roundToTwoDecimals } from "app/modules/tickets/domain/utils/money-utils";
-import { formatDateYYYYMMDD, getMonthEndMadrid } from "../domain/utils/date-utils";
 import { ILogger } from "app/modules/shared/infrastructure/logging/ILogger";
+import { TimezoneManager } from "../domain/utils/date-utils";
 
 interface TaxLineGrouping {
     firstTicket: TicketDocument;
@@ -113,7 +113,16 @@ export class MonthlyReportGenerator implements IMonthlyReportGenerator {
         const { firstTicket, lastTicket, currency, taxGroups, totalWithTax } =
             await this.groupTicketsAndTaxLines(this.ticketRepository.findByYearAndMonth(year, month));
 
-        const lastDayOfMonth = getMonthEndMadrid(year, month);
+        const lastDayOfMonth = TimezoneManager.getMonthEnd(year, month, 'Europe/Madrid');
+        const lastDayFormatted = TimezoneManager.formatYYYYMMDD(lastDayOfMonth);
+
+        this.logger.info('Getting lastDayOfMonth', {
+            year,
+            month,
+            lastDayOfMonth,
+            lastDayFormatted,
+        });
+
         const ticketRange = `${firstTicket.id}_${lastTicket.id}`;
 
         let positionIndex = 0;
@@ -121,15 +130,15 @@ export class MonthlyReportGenerator implements IMonthlyReportGenerator {
         const posicionImpuestos: TaxPosition[] = [];
 
         const header: MonthlyReportHeader = {
-            Fecha_documento: formatDateYYYYMMDD(lastDayOfMonth),
-            Fecha_contable: formatDateYYYYMMDD(lastDayOfMonth),
+            Fecha_documento: lastDayFormatted,
+            Fecha_contable: lastDayFormatted,
             Ejercicio: year.toString(),
             Periodo: month.toString().padStart(2, '0'),
             Sociedad: MonthlyReportGenerator.STATIC_VALUES.SOCIEDAD,
             Clase_documento: MonthlyReportGenerator.STATIC_VALUES.CLASE_DOCUMENTO,
             Referencia: ticketRange,
             Texto_cabecera: "",
-            Fecha_IVA: formatDateYYYYMMDD(lastDayOfMonth)
+            Fecha_IVA: lastDayFormatted
         };
 
         const customerPosition: CustomerPosition = {

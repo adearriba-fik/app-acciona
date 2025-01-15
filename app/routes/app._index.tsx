@@ -16,10 +16,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.admin(request);
   const taxincluded = await modules.storeConfig.getTaxesIncluded(session.shop);
 
-  return Response.json({
+  return {
     shop: session.shop,
     taxesIncluded: taxincluded
-  });
+  };
 }
 
 export default function Index() {

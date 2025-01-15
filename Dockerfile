@@ -1,21 +1,32 @@
-FROM node:18-alpine
+# Base stage for dependencies
+FROM node:21-alpine AS deps
 RUN apk add --no-cache openssl
+WORKDIR /app
 
-EXPOSE 3000
+COPY package.json yarn.lock* ./
 
+RUN yarn install --frozen-lockfile
+
+# Builder stage
+FROM node:21-alpine AS builder
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package.json ./
+COPY . .
+
+ENV NODE_ENV=production
+RUN yarn build
+
+# Production stage
+FROM node:21-alpine AS runner
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY package.json package-lock.json* ./
+COPY --from=builder /app .
 
-RUN npm ci --omit=dev && npm cache clean --force
-# Remove CLI packages since we don't need them in production by default.
-# Remove this line if you want to run CLI commands in your container.
-RUN npm remove @shopify/cli
+EXPOSE 3000
 
-COPY . .
-
-RUN npm run build
-
-CMD ["npm", "run", "docker-start"]
+CMD ["yarn", "docker-start"]
