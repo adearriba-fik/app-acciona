@@ -78,11 +78,19 @@ export type UpdateOrderTicketsMutationVariables = AdminTypes.Exact<{
 
 export type UpdateOrderTicketsMutation = { metafieldsSet?: AdminTypes.Maybe<{ metafields?: AdminTypes.Maybe<Array<Pick<AdminTypes.Metafield, 'key' | 'namespace' | 'value' | 'createdAt' | 'updatedAt'>>>, userErrors: Array<Pick<AdminTypes.MetafieldsSetUserError, 'field' | 'message' | 'code'>> }> };
 
+export type GetOrderByOrderIdQueryVariables = AdminTypes.Exact<{
+  id: AdminTypes.Scalars['ID']['input'];
+}>;
+
+
+export type GetOrderByOrderIdQuery = { order?: AdminTypes.Maybe<Pick<AdminTypes.Order, 'id' | 'tags'>> };
+
 interface GeneratedQueryTypes {
   "#graphql\n  query shopConfig {\n    shop {\n        name\n        taxesIncluded\n    }\n  }\n": {return: ShopConfigQuery, variables: ShopConfigQueryVariables},
   "#graphql\n  query GetMetaobjectDefinition($type: String!) {\n    metaobjectDefinitionByType(type: $type) {\n      id\n      type\n      fieldDefinitions {\n          key\n          type {\n            name\n            category\n          }\n          required\n        }\n    }\n  }\n": {return: GetMetaobjectDefinitionQuery, variables: GetMetaobjectDefinitionQueryVariables},
   "#graphql\n  query getOrderMetafieldDefinition($ownerType: MetafieldOwnerType!, $query: String!) {\n    metafieldDefinitions(\n      ownerType: $ownerType,\n      query: $query,\n      first: 1\n    ) {\n      edges {\n        node {\n          id\n          namespace\n          key\n          name\n        }\n      }\n    }\n  }\n": {return: GetOrderMetafieldDefinitionQuery, variables: GetOrderMetafieldDefinitionQueryVariables},
   "#graphql\n  query getOrderTickets($id: ID!, $namespace: String!) {\n    order(id: $id) {\n      id\n      metafield(namespace: $namespace, key: \"tickets\") {\n        value\n      }\n    }\n  }\n": {return: GetOrderTicketsQuery, variables: GetOrderTicketsQueryVariables},
+  "#graphql\n    query GetOrderByOrderId($id: ID!) {\n        order(id: $id) {\n            id\n            tags\n        }\n    }\n": {return: GetOrderByOrderIdQuery, variables: GetOrderByOrderIdQueryVariables},
 }
 
 interface GeneratedMutationTypes {

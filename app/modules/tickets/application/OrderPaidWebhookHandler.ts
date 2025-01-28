@@ -26,7 +26,16 @@ export class OrderPaidWebhookHandler implements IShopifyWebhookHandler<OrderPaid
         });
     }
 
-    async handle({ payload, shop, graphqlClient }: ShopifyWebhookContext<OrderPaidPayload>): Promise<void> {
+    async handle({ payload, shop }: ShopifyWebhookContext<OrderPaidPayload>): Promise<void> {
+        if (payload.tags?.includes("ceco")) {
+            this.logger.info('Discarded. Order has "ceco" in tags.', {
+                shop,
+                orderId: payload.id
+            });
+
+            return;
+        }
+
         const storeConfigModule = await modules.storeConfig;
         const taxesIncluded = await storeConfigModule.getTaxesIncluded(shop);
 

@@ -11,6 +11,7 @@ import { RefundCreatePayload, RefundLineItem } from "../domain/entities/RefundCr
 import { mapToRefundTicketCreateRequest, RefundSummary } from "../domain/entities/RefundSummary";
 import { parseAmount, roundToTwoDecimals, safeAdd, safeDivide } from "../domain/utils/money-utils";
 import { modules } from "app/modules/modules.server";
+import { getOrderTags } from "../infrastructure/services/shopify/OrderTagsQuery";
 
 export class RefundCreatedWebhookHandler implements IShopifyWebhookHandler<RefundCreatePayload> {
     public readonly topic = 'orders/paid';
@@ -29,6 +30,17 @@ export class RefundCreatedWebhookHandler implements IShopifyWebhookHandler<Refun
     async handle({ payload, shop, graphqlClient }: ShopifyWebhookContext<RefundCreatePayload>): Promise<void> {
         if (payload.refund_line_items.length == 0 || payload.transactions.length == 0) {
             this.logger.info(`Discarded: Empty ${payload.refund_line_items.length == 0 ? 'refund_line_items' : 'transactions'} array. This is an exchange.`);
+            return;
+        }
+
+        const orderTags = await getOrderTags(payload.order_id, graphqlClient);
+        if (orderTags.includes('ceco')) {
+            this.logger.info('Discarded. Order has "ceco" in tags.', {
+                shop,
+                refundId: payload.id,
+                orderId: payload.order_id
+            });
+
             return;
         }
 

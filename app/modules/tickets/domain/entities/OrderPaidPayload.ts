@@ -14,6 +14,7 @@ export interface OrderPaidPayload {
     total_tax: string;
     taxes_included: boolean;
     line_items: OrderLineItem[];
+    tags?: string;
 }
 
 export interface OrderLineItem {
