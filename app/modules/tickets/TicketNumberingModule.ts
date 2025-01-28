@@ -19,16 +19,6 @@ const ticketsContainerConfig: Partial<ContainerRequest> = {
         paths: ["/year"],
         version: 2,
     },
-    uniqueKeyPolicy: {
-        uniqueKeys: [
-            {
-                paths: ["/order_id", "/type"]
-            },
-            {
-                paths: ["/refund_id", "/type"]
-            }
-        ]
-    },
     indexingPolicy: {
         indexingMode: "consistent",
         automatic: true,

@@ -3,6 +3,7 @@ import { ITicketNumberGenerator } from "../../../domain/ports/ITicketNumberGener
 import { CounterDocument, OrderTicketDocument, RefundTicketDocument, TicketDocument } from "app/modules/tickets/domain/entities/Ticket";
 import { OrderTicketCreateRequest, RefundTicketCreateRequest, TicketCreateRequest } from "app/modules/tickets/domain/entities/TicketCreateRequest";
 import { ILogger } from "app/modules/shared/infrastructure/logging/ILogger";
+import { CosmosBathOperationError } from "app/modules/shared/infrastructure/cosmosdb/CosmosDbErrors";
 
 enum CosmosErrorCode {
     NotFound = 404,
@@ -103,19 +104,25 @@ export class CosmosTicketNumberGenerator implements ITicketNumberGenerator {
         const ticketNumber = this.formatTicketNumber(year, nextValue);
         const ticketDoc = this.createTicketDocument(ticketNumber, request, year);
 
+        const counterBody = {
+            id: counterDoc.id,
+            type: counterDoc.type,
+            year: counterDoc.year,
+            currentValue: nextValue,
+        };
+
+        this.logger.debug('Replacing counter doc', { counterBody });
+
         const operations: OperationInput[] = [
             {
                 operationType: 'Replace',
                 id: counterDoc.id,
-                resourceBody: {
-                    ...counterDoc,
-                    currentValue: nextValue
-                },
+                resourceBody: counterBody,
                 ifMatch: counterDoc._etag,
             },
             {
                 operationType: 'Create',
-                resourceBody: ticketDoc
+                resourceBody: ticketDoc,
             }
         ];
 
@@ -125,11 +132,33 @@ export class CosmosTicketNumberGenerator implements ITicketNumberGenerator {
             if (!operationResponses ||
                 !operationResponses[0].statusCode.toString().startsWith('2') ||
                 !operationResponses[1].statusCode.toString().startsWith('2')) {
-                throw new Error('Batch operation failed');
+
+                const errorDetails = operationResponses ?
+                    `Counter update status: ${operationResponses[0]?.statusCode}, ` +
+                    `Ticket creation status: ${operationResponses[1]?.statusCode}` :
+                    'No operation responses received';
+
+                const batchError = new CosmosBathOperationError(
+                    `Batch operation failed: ${errorDetails}`,
+                    operationResponses
+                );
+
+                this.logger.error('Batch operation failed', batchError, {
+                    counterStatus: operationResponses?.[0]?.statusCode,
+                    ticketStatus: operationResponses?.[1]?.statusCode,
+                    ticketNumber,
+                    counterId: counterDoc.id
+                });
+
+                throw batchError;
             }
 
             return operationResponses[1].resourceBody as TicketDocument;
         } catch (error: any) {
+            if (error instanceof CosmosBathOperationError) {
+                throw error;
+            }
+
             if (error.code === CosmosErrorCode.PreconditionFailed) {
                 const { resource: latestCounter } = await this.container.item(counterDoc.id, year).read<CounterDocument>();
                 if (!latestCounter) {
