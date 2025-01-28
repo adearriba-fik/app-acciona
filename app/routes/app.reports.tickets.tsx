@@ -37,7 +37,7 @@ export async function action({ request }: ActionFunctionArgs): Promise<ActionDat
 
             return {
                 success: true,
-                report,
+                report: report.report,
             };
         } else if (intent == 'send') {
             if (!year || !month || month < 1 || month > 12) {

@@ -3,7 +3,7 @@
 client_id = "922282a3229a4b63a8241b2032e1f9d3"
 name = "fik - Acciona"
 handle = "fik-acciona"
-application_url = "https://delicious-pushing-pmid-presence.trycloudflare.com"
+application_url = "https://ambient-violent-virus-cottage.trycloudflare.com"
 embedded = true
 
 [access_scopes]
@@ -12,9 +12,9 @@ scopes = "read_orders,write_orders,write_metaobject_definitions,write_metaobject
 
 [auth]
 redirect_urls = [
-  "https://delicious-pushing-pmid-presence.trycloudflare.com/auth/callback",
-  "https://delicious-pushing-pmid-presence.trycloudflare.com/auth/shopify/callback",
-  "https://delicious-pushing-pmid-presence.trycloudflare.com/api/auth/callback"
+  "https://ambient-violent-virus-cottage.trycloudflare.com/auth/callback",
+  "https://ambient-violent-virus-cottage.trycloudflare.com/auth/shopify/callback",
+  "https://ambient-violent-virus-cottage.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
@@ -41,5 +41,5 @@ embedded = false
 
 [build]
 dev_store_url = "fik-checkoutext-preview.myshopify.com"
-automatically_update_urls_on_dev = true
+automatically_update_urls_on_dev = false
 include_config_on_deploy = true

@@ -11,6 +11,7 @@ import { cosmosDBSessionStorage, initializeCosmosDatabase } from "./db.server";
 
 const shopifyLogger = new ShopifyLogger(logger);
 initializeCosmosDatabase().catch(console.error);
+modules.initializeAll();
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,

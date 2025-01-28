@@ -8,6 +8,7 @@ import { ITicketNumberingModuleApi, TicketNumberingModule } from "./tickets/Tick
 class Modules {
     private static instance: Modules;
     private moduleInstances: Map<string, Promise<any> | any> = new Map();
+    private initialized = false;
 
     private constructor() { }
 
@@ -23,6 +24,7 @@ class Modules {
         createFn: () => T
     ): T {
         if (!this.moduleInstances.has(key)) {
+            logger.info(`Starting ${key} module`);
             this.moduleInstances.set(key, createFn());
         }
         return this.moduleInstances.get(key) as T;
@@ -33,9 +35,40 @@ class Modules {
         createFn: () => Promise<T>
     ): Promise<T> {
         if (!this.moduleInstances.has(key)) {
+            logger.info(`Starting ${key} module`);
             this.moduleInstances.set(key, createFn());
         }
         return this.moduleInstances.get(key) as Promise<T>;
+    }
+
+    public async initializeAll(): Promise<void> {
+        if (this.initialized) {
+            logger.warn('Modules have already been initialized');
+            return;
+        }
+
+        try {
+            logger.info('Starting module initialization...');
+
+            const promises = [
+                this.tickets,
+                this.storeConfig,
+                this.reports,
+            ];
+
+            await Promise.all(promises);
+            this.initialized = true;
+
+            logger.info('All modules initialized successfully');
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                logger.error('Failed to initialize modules', error);
+            } else {
+                logger.error('Failed to initialize modules');
+            }
+
+            throw error;
+        }
     }
 
     public get tickets(): Promise<ITicketNumberingModuleApi> {
