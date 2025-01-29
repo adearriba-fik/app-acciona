@@ -1,5 +1,5 @@
 # Base stage for dependencies
-FROM node:21-alpine AS deps
+FROM node:22-alpine AS deps
 RUN apk add --no-cache openssl
 WORKDIR /app
 
