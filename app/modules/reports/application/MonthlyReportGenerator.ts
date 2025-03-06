@@ -136,8 +136,8 @@ export class MonthlyReportGenerator implements IMonthlyReportGenerator {
             Periodo: month.toString().padStart(2, '0'),
             Sociedad: MonthlyReportGenerator.STATIC_VALUES.SOCIEDAD,
             Clase_documento: MonthlyReportGenerator.STATIC_VALUES.CLASE_DOCUMENTO,
-            Referencia: ticketRange,
-            Texto_cabecera: "",
+            Referencia: lastTicket.id,
+            Texto_cabecera: `${firstTicket.id}_`,
             Fecha_IVA: lastDayFormatted
         };
 

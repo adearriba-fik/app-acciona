@@ -3,7 +3,7 @@
 client_id = "922282a3229a4b63a8241b2032e1f9d3"
 name = "fik - Acciona"
 handle = "fik-acciona"
-application_url = "https://fik-acciona-pro-ccdbhzhzc6b5arar.westeurope-01.azurewebsites.net/"
+application_url = "https://ambient-violent-virus-cottage.trycloudflare.com"
 embedded = true
 
 [access_scopes]
@@ -12,9 +12,9 @@ scopes = "read_orders,write_orders,write_metaobject_definitions,write_metaobject
 
 [auth]
 redirect_urls = [
-  "https://fik-acciona-pro-ccdbhzhzc6b5arar.westeurope-01.azurewebsites.net/auth/callback",
-  "https://fik-acciona-pro-ccdbhzhzc6b5arar.westeurope-01.azurewebsites.net/auth/shopify/callback",
-  "https://fik-acciona-pro-ccdbhzhzc6b5arar.westeurope-01.azurewebsites.net/api/auth/callback"
+  "https://ambient-violent-virus-cottage.trycloudflare.com/auth/callback",
+  "https://ambient-violent-virus-cottage.trycloudflare.com/auth/shopify/callback",
+  "https://ambient-violent-virus-cottage.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

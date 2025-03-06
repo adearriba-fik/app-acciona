@@ -15,7 +15,7 @@ export class CosmosTicketRepository implements ITicketRepository {
         const endDate = TimezoneManager.getMonthEnd(year, month, 'Europe/Madrid');
 
         const querySpec = {
-            query: "SELECT * FROM c WHERE c.year = @year AND c.created_at >= @startDate AND c.created_at <= @endDate ORDER BY c.id",
+            query: "SELECT * FROM c WHERE c.year = @year AND c.created_at >= @startDate AND c.created_at <= @endDate ORDER BY c.created_at asc",
             parameters: [
                 { name: "@year", value: year.toString() },
                 { name: "@startDate", value: startDate.toISOString() },
