@@ -63,13 +63,13 @@ export class ShopifyOrderTicketNumberUpdater implements IOrderTicketNumberUpdate
     ticketDocument: TicketDocument,
   ): Promise<void> {
     const { admin } = await unauthenticated.admin(shop);
-    // First, create the ticket metaobject
+
+    await this.updateOrderCustomAttributes(shopifyGraphqlOrderId, ticketDocument, admin.graphql);
+
     const ticketMetaobject = await this.upsertTicketMetaobject(ticketDocument, admin.graphql);
 
-    // Then get current tickets
     const currentTickets = await this.getOrderTickets(shopifyGraphqlOrderId, admin.graphql);
 
-    // Add new ticket to the list if it doesn't exist
     if (!currentTickets.includes(ticketMetaobject!.id)) {
       const updatedTickets = [...currentTickets, ticketMetaobject!.id];
       await this.updateOrderTickets(shopifyGraphqlOrderId, updatedTickets, admin.graphql);
@@ -168,6 +168,53 @@ export class ShopifyOrderTicketNumberUpdater implements IOrderTicketNumberUpdate
           .map((error: any) => `${error.field}: ${error.message}`)
           .join(', ')}`
       );
+    }
+  }
+
+  private async updateOrderCustomAttributes(
+    shopifyGraphqlOrderId: string,
+    ticketDocument: TicketDocument,
+    graphqlClient: AdminApiContextWithoutRest['graphql']
+  ): Promise<void> {
+    try {
+      const response = await graphqlClient(`#graphql
+        mutation updateOrderCustomAttributes($input: OrderInput!) {
+          orderUpdate(input: $input) {
+            order {
+              id
+              customAttributes {
+                key
+                value
+              }
+            }
+            userErrors {
+              message
+              field
+            }
+          }
+        }
+      `, {
+        variables: {
+          input: {
+            id: shopifyGraphqlOrderId,
+            customAttributes: [
+              {
+                key: "ticket",
+                value: ticketDocument.id,
+              }
+            ],
+          },
+        },
+      });
+
+      const { data } = await response.json();
+
+      if (data?.orderUpdate?.userErrors && data.orderUpdate.userErrors.length > 0) {
+        const errorMessages = data.orderUpdate.userErrors.map(err => `${err.field}: ${err.message}`).join(', ');
+        throw new Error(`Failed to update order custom attributes: ${errorMessages}`);
+      }
+    } catch (error) {
+      throw new Error(`Failed to update order custom attributes: ${(error as any).message}`);
     }
   }
 }

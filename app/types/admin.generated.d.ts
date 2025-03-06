@@ -78,6 +78,16 @@ export type UpdateOrderTicketsMutationVariables = AdminTypes.Exact<{
 
 export type UpdateOrderTicketsMutation = { metafieldsSet?: AdminTypes.Maybe<{ metafields?: AdminTypes.Maybe<Array<Pick<AdminTypes.Metafield, 'key' | 'namespace' | 'value' | 'createdAt' | 'updatedAt'>>>, userErrors: Array<Pick<AdminTypes.MetafieldsSetUserError, 'field' | 'message' | 'code'>> }> };
 
+export type UpdateOrderCustomAttributesMutationVariables = AdminTypes.Exact<{
+  input: AdminTypes.OrderInput;
+}>;
+
+
+export type UpdateOrderCustomAttributesMutation = { orderUpdate?: AdminTypes.Maybe<{ order?: AdminTypes.Maybe<(
+      Pick<AdminTypes.Order, 'id'>
+      & { customAttributes: Array<Pick<AdminTypes.Attribute, 'key' | 'value'>> }
+    )>, userErrors: Array<Pick<AdminTypes.UserError, 'message' | 'field'>> }> };
+
 export type GetOrderByOrderIdQueryVariables = AdminTypes.Exact<{
   id: AdminTypes.Scalars['ID']['input'];
 }>;
@@ -98,6 +108,7 @@ interface GeneratedMutationTypes {
   "#graphql\n  mutation createOrderMetafieldDefinition($definition: MetafieldDefinitionInput!) {\n    metafieldDefinitionCreate(definition: $definition) {\n    createdDefinition {\n        id\n        name\n        namespace\n        key\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: CreateOrderMetafieldDefinitionMutation, variables: CreateOrderMetafieldDefinitionMutationVariables},
   "#graphql\n  mutation upsertTicketMetaobject($handle: MetaobjectHandleInput!, $metaobject: MetaobjectUpsertInput!) {\n    metaobjectUpsert(handle: $handle, metaobject: $metaobject) {\n      metaobject {\n        id\n        handle\n        fields {\n          key\n          value\n        }\n      }\n      userErrors {\n        field\n        message\n        code\n      }\n    }\n  }\n": {return: UpsertTicketMetaobjectMutation, variables: UpsertTicketMetaobjectMutationVariables},
   "#graphql\n  mutation updateOrderTickets($metafields: [MetafieldsSetInput!]!) {\n    metafieldsSet(metafields: $metafields) {\n      metafields {\n        key\n        namespace\n        value\n        createdAt\n        updatedAt\n      }\n      userErrors {\n        field\n        message\n        code\n      }\n    }\n  }\n": {return: UpdateOrderTicketsMutation, variables: UpdateOrderTicketsMutationVariables},
+  "#graphql\n        mutation updateOrderCustomAttributes($input: OrderInput!) {\n          orderUpdate(input: $input) {\n            order {\n              id\n              customAttributes {\n                key\n                value\n              }\n            }\n            userErrors {\n              message\n              field\n            }\n          }\n        }\n      ": {return: UpdateOrderCustomAttributesMutation, variables: UpdateOrderCustomAttributesMutationVariables},
 }
 declare module '@shopify/admin-api-client' {
   type InputMaybe<T> = AdminTypes.InputMaybe<T>;
