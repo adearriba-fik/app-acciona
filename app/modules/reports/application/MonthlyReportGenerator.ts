@@ -94,8 +94,19 @@ export class MonthlyReportGenerator implements IMonthlyReportGenerator {
             totalAmount = roundToTwoDecimals(totalAmount + group.totalPrice + group.totalTax);
         }
 
-        if (totalWithTax !== totalAmount) {
-            throw new Error("Report total and detail doesn't match");
+        if (Math.abs(totalWithTax - totalAmount) > 0.01) {
+            const error = new Error("Report total and detail doesn't match");
+
+            this.logger.error("Report total and detail doesn't match", error, {
+                expectedTotal: totalWithTax,
+                calculatedTotal: totalAmount,
+                difference: Math.abs(totalWithTax - totalAmount),
+                firstTicketId: firstTicket.id,
+                lastTicketId: lastTicket.id,
+                taxGroups: Array.from(taxGroups.entries()),
+            });
+
+            throw error;
         }
 
         return {
