@@ -29,36 +29,59 @@ export class ReportingModule implements IReportingModuleApi {
         reportRepository: IReportRepository,
         reportSender: ReportSender,
         taskScheduler: ITaskScheduler,
-        moduleLogger: ILogger,
+        private moduleLogger: ILogger,
     ) {
         this.monthlyReportGenerator = monthlyReportGenerator;
         this.reportRepository = reportRepository;
         this.reportSender = reportSender;
         this.taskScheduler = taskScheduler;
 
-        this.taskScheduler.addJob('failed-reports-retries', '0 0 0/4 * * *', async () => {
-            const results = await this.reportSender.retryFailedReports();
-            moduleLogger.info('Retry failed reports results', { results });
-        });
+        this.checkAndRestoreScheduledJobs();
 
-        this.taskScheduler.addJob('monthly-report', '0 0 1 1 * *', async () => {
-            const today = new Date();
-            const result = await this.sendReport(today.getFullYear(), today.getMonth());
+        const jobCheckIntervalTime = 60 * 1000 * 60 * 4; // every 4 hours
 
-            moduleLogger.info('Retry failed reports results', { result });
-        });
+        const jobCheckInterval = setInterval(() => {
+            this.checkAndRestoreScheduledJobs();
+            const jobs = this.taskScheduler.getAllJobs();
+            this.moduleLogger.info('Scheduled jobs check', { jobs: jobs.map(job => job.name) });
+        }, jobCheckIntervalTime);
 
         process.on('SIGTERM', async () => {
+            if (jobCheckInterval) clearInterval(jobCheckInterval);
             this.taskScheduler.getAllJobs().forEach(job => {
                 this.taskScheduler.removeJob(job.name);
-            })
+            });
         });
 
         process.on('SIGINT', async () => {
+            if (jobCheckInterval) clearInterval(jobCheckInterval);
             this.taskScheduler.getAllJobs().forEach(job => {
                 this.taskScheduler.removeJob(job.name);
-            })
+            });
         });
+    }
+
+    private checkAndRestoreScheduledJobs(): void {
+        const jobs = this.taskScheduler.getAllJobs();
+        const jobNames = jobs.map(job => job.name);
+
+        if (!jobNames.includes('failed-reports-retries')) {
+            this.taskScheduler.addJob('failed-reports-retries', '0 0 0/4 * * *', async () => {
+                const results = await this.reportSender.retryFailedReports();
+                this.moduleLogger.info('Retry failed reports results', { results });
+            });
+            this.moduleLogger.info('Restored missing job: failed-reports-retries');
+        }
+
+        if (!jobNames.includes('monthly-report')) {
+            this.taskScheduler.addJob('monthly-report', '0 0 5 1 * *', async () => {
+                const today = new Date();
+                const result = await this.sendReport(today.getFullYear(), today.getMonth());
+
+                this.moduleLogger.info('Mothly report results', { result });
+            });
+            this.moduleLogger.info('Restored missing job: monthly-report');
+        }
     }
 
     public static async create(): Promise<ReportingModule> {
