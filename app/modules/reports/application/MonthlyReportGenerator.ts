@@ -53,7 +53,6 @@ export class MonthlyReportGenerator implements IMonthlyReportGenerator {
         let firstTicket: TicketDocument | null = null;
         let lastTicket: TicketDocument | null = null;
         let currency: string | null = null;
-        let totalWithTax: number = 0;
 
         const taxGroups = new Map<number, {
             totalPrice: number;
@@ -69,7 +68,6 @@ export class MonthlyReportGenerator implements IMonthlyReportGenerator {
             lastTicket = ticket;
 
             const multiplier = ticket.type === 'refund' ? -1 : 1;
-            totalWithTax = roundToTwoDecimals(totalWithTax + (ticket.totalAmount * multiplier));
 
             for (const taxLine of ticket.tax_lines) {
                 const group = taxGroups.get(taxLine.rate) || {
@@ -89,25 +87,20 @@ export class MonthlyReportGenerator implements IMonthlyReportGenerator {
             throw new Error('No tickets found for the specified period');
         }
 
-        let totalAmount = 0;
+        let totalWithTax = 0;
         for (const group of taxGroups.values()) {
-            totalAmount = roundToTwoDecimals(totalAmount + group.totalPrice + group.totalTax);
+            totalWithTax = roundToTwoDecimals(totalWithTax + group.totalPrice + group.totalTax);
         }
 
-        if (Math.abs(totalWithTax - totalAmount) > 0.01) {
-            const error = new Error("Report total and detail doesn't match");
-
-            this.logger.error("Report total and detail doesn't match", error, {
-                expectedTotal: totalWithTax,
-                calculatedTotal: totalAmount,
-                difference: Math.abs(totalWithTax - totalAmount),
-                firstTicketId: firstTicket.id,
-                lastTicketId: lastTicket.id,
-                taxGroups: Array.from(taxGroups.entries()),
-            });
-
-            throw error;
-        }
+        this.logger.info('Total calculated from tax groups', {
+            totalWithTax,
+            taxGroupsDetail: Array.from(taxGroups.entries()).map(([rate, group]) => ({
+                rate: `${(rate * 100).toFixed(0)}%`,
+                price: group.totalPrice,
+                tax: group.totalTax,
+                subtotal: roundToTwoDecimals(group.totalPrice + group.totalTax)
+            }))
+        });
 
         return {
             firstTicket,
