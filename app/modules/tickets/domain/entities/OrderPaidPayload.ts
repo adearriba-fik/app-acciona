@@ -15,6 +15,7 @@ export interface OrderPaidPayload {
     taxes_included: boolean;
     line_items: OrderLineItem[];
     tags?: string;
+    payment_terms?: PaymentTerms;
 }
 
 export interface OrderLineItem {
@@ -25,4 +26,19 @@ export interface OrderLineItem {
     quantity: number;
     tax_lines: TaxLine[];
     discount_allocations: DiscountAllocation[];
+}
+
+export interface PaymentTerms {
+    id: number;
+    created_at: string;
+    due_in_days: number | null;
+    payment_schedules: PaymentSchedule[];
+    payment_terms_name: string;
+    payment_terms_type: string;
+    updated_at: string;
+}
+
+export interface PaymentSchedule {
+    amount: number;
+    due_at: string;
 }

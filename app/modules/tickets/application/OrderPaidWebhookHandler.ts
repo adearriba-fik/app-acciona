@@ -27,26 +27,30 @@ export class OrderPaidWebhookHandler implements IShopifyWebhookHandler<OrderPaid
     }
 
     async handle({ payload, shop }: ShopifyWebhookContext<OrderPaidPayload>): Promise<void> {
-        if (payload.tags?.includes("ceco")) {
-            this.logger.info('Discarded. Order has "ceco" in tags.', {
-                shop,
-                orderId: payload.id
-            });
+        const handlerLogger = this.logger.child({ shop, orderId: payload.id });
+        handlerLogger.info('Received order paid webhook');
 
+        if (payload.payment_terms) {
+            handlerLogger.info('Order has payment terms, skipping ticket generation.', {
+                paymentTerms: payload.payment_terms,
+            });
+            return;
+        }
+
+        if (payload.tags?.includes("ceco")) {
+            handlerLogger.info('Discarded. Order has "ceco" in tags.', { tags: payload.tags });
             return;
         }
 
         const storeConfigModule = await modules.storeConfig;
         const taxesIncluded = await storeConfigModule.getTaxesIncluded(shop);
 
-        this.logger.info('Processing order with tax configuration', {
-            shop,
+        handlerLogger.info('Processing order with tax configuration', {
             taxesIncluded,
-            orderId: payload.id
         });
 
         const shopSummary = generateOrderSummary(payload, 'shop_money', taxesIncluded);
-        this.logger.info('Shop Currency Summary', {
+        handlerLogger.info('Shop Currency Summary', {
             data: shopSummary
         });
 
